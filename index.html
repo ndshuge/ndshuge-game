@@ -101,6 +101,7 @@
   .card.fps{--g1:linear-gradient(150deg,#5A6B4A,#3D4A30)}
   .card.still{--g1:linear-gradient(150deg,#4C5C58,#333F3B)}
   .card.phy{--g1:linear-gradient(150deg,#6B5640,#4A3A28)}
+  .card.motu{--g1:linear-gradient(150deg,#4A4238,#26221B)}
   .card .body{flex:1;min-width:0}
   .card .t{font-size:16.5px;font-weight:800;letter-spacing:.4px;color:var(--card-ink);
     display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -163,6 +164,7 @@ var IC = {
   fps:'<circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/>',
   phy:'<circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>',
   still:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  motu:'<path d="m11 10 3 3"/><path d="M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"/><path d="M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"/>',
   chev:'<path d="m9 18 6-6-6-6"/>'
 };
 function svg(inner){
@@ -174,7 +176,9 @@ var games = [
   {no:'No.02', cls:'still', t:'凝时 STILL', tag:'弹幕 · 时停', icon:'still',
    d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。', href:'./games/still/'},
   {no:'No.03', cls:'phy', t:'重力花园', tag:'物理 · 解压', icon:'phy',
-   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/'}
+   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/'},
+  {no:'No.04', cls:'motu', t:'墨途', tag:'水墨 · 平台', icon:'motu',
+   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/'}
 ];
 var cards = document.getElementById('cards');
 games.forEach(function(g){

@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨途 · 走过的路，会成为你的桥</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1c1913; }
+  canvas { display: block; cursor: default; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script>
+'use strict';
+/* ============================================================
+   墨途 MOTU · 水墨平台冒险
+   核心机制：走过的路留下墨迹，墨迹即桥。
+   枯湿由速度决定，墨会蒸发 / 被蠹啃食 / 被风吹散。
+   通关时，你留下的轨迹被装裱成「本关笔意」。
+   ============================================================ */
+
+// ---------------- 基础配置 ----------------
+var VW = 960, VH = 600;
+var INK = '#2b2622', PAPER = '#efe7d3', RED = '#a8402f';
+var CFG = {
+  grav: 2400, moveAccel: 3600, moveMax: 340, airCtrl: 0.62, fric: 2800,
+  jumpV: -760, jumpCut: 0.42, coyote: 0.1, jumpBuf: 0.12,
+  playerR: 13,
+  inkMax: 100, inkRunCost: 8, inkFallCost: 7, inkJumpCost: 5,
+  inkRegen: 4, dropInk: 20, spikeDmg: 25, bugDmg: 15, bugStompGain: 5,
+  invuln: 1.1, windForce: 220,
+  inkGap: 5, inkLife: 7, windLifeMul: 0.32, inkFade: 0.72,
+  inkSettle: 0.28, // 墨落定时间：踩不到自己正在画的墨，只能踩已画好的
+  bugSpeed: 65, bugEatR: 85, bugEatDt: 0.75,
+};
+
+// ---------------- 工具 ----------------
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function dist2(x1, y1, x2, y2) { var dx = x1 - x2, dy = y1 - y2; return dx * dx + dy * dy; }
+function rnd(a, b) { return a + Math.random() * (b - a); }
+
+// ---------------- 关卡数据 ----------------
+// plats: [x,y,w,h] 实心山石；P(x,y,w)=浮空石台(厚22)；G(x,w)=地面
+function G(x, w) { return [x, 540, w, 60]; }
+function P(x, y, w) { return [x, y, w, 22]; }
+
+var LEVELS = [
+  { // 其一
+    name: '其一 · 笔落', stamp: '笔', w: 2000, spawn: [110, 500],
+    plats: [G(0, 420), G(700, 560)],
+    tip: [[150, 468, '行走留墨'], [380, 420, '摔过的跟头 · 会变成桥'], [960, 468, '落墨成桥']],
+    drops: [], spikes: [], winds: [], bugs: [],
+    goal: [1150, 540]
+  },
+  { // 其二
+    name: '其二 · 回锋', stamp: '回', w: 2200, spawn: [110, 500],
+    plats: [G(0, 300), P(430, 460, 170), P(700, 350, 150), P(560, 215, 150), [860, 150, 620, 60]],
+    tip: [[130, 468, '拾级而上'], [620, 320, '差一点的 · 用墨补']],
+    drops: [[760, 285]], spikes: [], winds: [], bugs: [],
+    goal: [1300, 150]
+  },
+  { // 其三
+    name: '其三 · 涸辙', stamp: '涸', w: 2600, spawn: [110, 500], spawnInk: 55,
+    plats: [G(0, 320), G(560, 240), G(880, 240), G(1200, 240), G(1520, 240), G(1900, 240), G(2300, 300)],
+    tip: [[170, 468, '墨有尽时'], [400, 428, '驻笔可养墨']],
+    drops: [[500, 480], [840, 480], [1160, 480], [1480, 480], [1840, 480]],
+    spikes: [], winds: [], bugs: [],
+    goal: [2480, 540]
+  },
+  { // 其四
+    name: '其四 · 避芒', stamp: '避', w: 2600, spawn: [110, 500],
+    plats: [G(0, 1600), G(1880, 720)],
+    tip: [[260, 468, '芒刺伤墨'], [990, 415, '可跃可绕']],
+    drops: [[1180, 440], [1740, 440]],
+    spikes: [[700, 540, 110], [940, 540, 150], [1240, 540, 190]],
+    winds: [], bugs: [],
+    goal: [2460, 540]
+  },
+  { // 其五
+    name: '其五 · 御风', stamp: '御', w: 2800, spawn: [110, 500],
+    plats: [G(0, 600), P(980, 480, 130), P(1330, 500, 130), G(1560, 300), G(1900, 200), P(2300, 470, 130), G(2640, 160)],
+    tip: [[180, 468, '风起墨散 · 石可依'], [700, 280, '借风跃岛']],
+    drops: [[1040, 430], [1390, 450], [2360, 420]],
+    spikes: [],
+    winds: [[620, 200, 920, 400, 1], [2160, 160, 460, 440, 1]],
+    bugs: [],
+    goal: [2720, 540]
+  },
+  { // 其六
+    name: '其六 · 蠹蚀', stamp: '蠹', w: 2800, spawn: [110, 500],
+    plats: [G(0, 400), G(700, 300), G(1180, 360), G(1760, 340), G(2320, 480)],
+    tip: [[160, 468, '蠹食墨迹 · 踏而除之'], [830, 378, '从上方踩']],
+    drops: [[1350, 470], [2550, 470]],
+    spikes: [],
+    winds: [],
+    bugs: [[900, 430], [1500, 430], [2450, 430]],
+    goal: [2660, 540]
+  },
+  { // 其七
+    name: '其七 · 险峰', stamp: '险', w: 3200, spawn: [110, 500],
+    plats: [G(0, 320), P(480, 440, 160), P(760, 330, 150), P(520, 215, 150), [900, 270, 340, 340], G(1450, 520), P(2180, 460, 120), G(2350, 850)],
+    tip: [[150, 468, '险峰在望']],
+    drops: [[600, 380], [1150, 210], [2200, 330]],
+    spikes: [[960, 270, 130]],
+    winds: [[1980, 180, 360, 420, 1]],
+    bugs: [[1700, 460]],
+    goal: [3050, 540]
+  },
+  { // 其八
+    name: '其八 · 归章', stamp: '归', w: 2400, spawn: [110, 500], spawnInk: 100,
+    plats: [G(0, 360), G(2160, 240)],
+    tip: [[150, 468, '一苇以航'], [470, 408, '拾墨而行 · 心稳则桥稳']],
+    drops: [[560, 470], [820, 450], [1080, 450], [1340, 450], [1600, 450], [1860, 460]],
+    spikes: [], winds: [], bugs: [],
+    goal: [2280, 540]
+  },
+];
+
+// ---------------- 存档 ----------------
+var SAVE_KEY = 'motu.v1';
+var save = { unlocked: 1, done: [false, false, false, false, false, false, false, false], deaths: 0, scrolls: {} };
+function loadSave() {
+  try {
+    var s = localStorage.getItem(SAVE_KEY);
+    if (s) { var o = JSON.parse(s); if (o && o.unlocked) save = o; }
+  } catch (e) { }
+}
+function writeSave() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
+
+// ---------------- 音频（全合成） ----------------
+var AudioSys = (function () {
+  var ctx = null, master = null, windGain = null;
+  var muted = false, bgmT = 1.5, pickIdx = 0;
+  function init() {
+    if (ctx) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      ctx = new AC();
+      master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination);
+      var buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      var src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+      var bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.6;
+      windGain = ctx.createGain(); windGain.gain.value = 0;
+      src.connect(bp); bp.connect(windGain); windGain.connect(master);
+      src.start();
+    } catch (e) { ctx = null; }
+  }
+  function noiseBurst(dur, f0, f1, vol) {
+    if (!ctx || muted) return;
+    var t = ctx.currentTime;
+    var n = Math.floor(ctx.sampleRate * dur);
+    var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    var d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var lp = ctx.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(f0, t);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(f1, 40), t + dur);
+    var g = ctx.createGain(); g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(lp); lp.connect(g); g.connect(master);
+    src.start(t);
+  }
+  function tone(type, f0, f1, dur, vol, delay) {
+    if (!ctx || muted) return;
+    var t = ctx.currentTime + (delay || 0);
+    var o = ctx.createOscillator(); o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(Math.max(f1, 20), t + dur);
+    var g = ctx.createGain(); g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function pluck(f, vol) {
+    if (!ctx || muted) return;
+    var t = ctx.currentTime;
+    var o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.2);
+    o.connect(g); g.connect(master);
+    o.start(t); o.stop(t + 2.3);
+  }
+  var api = {
+    init: init,
+    toggleMute: function () { muted = !muted; return muted; },
+    isMuted: function () { return muted; },
+    resume: function () { if (ctx && ctx.state === 'suspended') ctx.resume(); },
+    jump: function () { noiseBurst(0.06, 900, 300, 0.06); tone('sine', 330, 160, 0.09, 0.1); },
+    land: function (v) { tone('sine', 150, 55, 0.07 + v * 0.03, Math.min(0.05 + v * 0.12, 0.22)); noiseBurst(0.05, 600, 200, Math.min(0.04 + v * 0.06, 0.12)); },
+    pick: function () { var sc = [523.25, 587.33, 659.25, 783.99, 880, 1046.5]; var f = sc[pickIdx % sc.length]; pickIdx++; tone('triangle', f, f * 0.995, 0.22, 0.12); tone('triangle', f * 2, f * 2, 0.14, 0.03); },
+    stamp: function () { tone('sine', 100, 40, 0.3, 0.4); noiseBurst(0.15, 300, 60, 0.28); pluck(261.63, 0.08); },
+    die: function () { tone('sine', 200, 50, 0.6, 0.25); noiseBurst(0.4, 800, 100, 0.12); },
+    hurt: function () { tone('square', 180, 120, 0.08, 0.1); },
+    bug: function () { tone('sawtooth', 700, 200, 0.12, 0.09); noiseBurst(0.06, 1500, 400, 0.05); },
+    clear: function () { pluck(392, 0.1); tone('triangle', 523.25, 523.25, 0.4, 0.08, 0.12); tone('triangle', 659.25, 659.25, 0.5, 0.08, 0.26); },
+    setWind: function (v) {
+      if (!windGain || !ctx) return;
+      var target = muted ? 0 : v;
+      if (Math.abs((windGain._last || 0) - target) < 0.001) return;
+      windGain._last = target;
+      windGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 0.15);
+    },
+    updateBGM: function (dt) {
+      if (!ctx || muted) return;
+      bgmT -= dt;
+      if (bgmT <= 0) {
+        bgmT = 1.4 + Math.random() * 1.7;
+        var sc = [130.81, 146.83, 164.81, 196, 220, 261.63];
+        var f = sc[Math.floor(Math.random() * sc.length)];
+        pluck(f, 0.045 + Math.random() * 0.03);
+        if (Math.random() < 0.38) pluck(f * 1.5, 0.025);
+      }
+    }
+  };
+  return api;
+})();
+
+// ---------------- 输入 ----------------
+var keys = {}, pressed = {};
+var mouseLogic = { x: 0, y: 0, click: false };
+function onKeyDown(e) {
+  var c = e.code;
+  if (!keys[c]) pressed[c] = true;
+  keys[c] = true;
+  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(c) >= 0) e.preventDefault();
+  AudioSys.init(); AudioSys.resume();
+  anyKeyAt = perfNow();
+  if (c === 'KeyG' && state === 'title' && save.done[7]) { state = 'gallery'; galleryT = 0; }
+}
+function onKeyUp(e) { keys[e.code] = false; }
+var anyKeyAt = 0;
+
+// ---------------- 全局状态 ----------------
+var canvas, ctx;
+var state = 'title'; // title | select | play | pause | stamp | clear | gallery
+var stateT = 0;
+var levelIdx = 0, LV = null;
+var player = null;
+var pts = [];           // 墨迹点 {x,y,r,age}
+var bugs = [], drops = [], particles = [], rings = [];
+var camX = 0, camY = 0;
+var shake = 0;
+var stampAnim = null;   // 盖章动画 {x,y,t,stamp,name,played}
+var clearData = null;   // clear 展示 {deaths, stamp, name}
+var selectIdx = 0;
+var galleryT = 0;
+var frameCount = 0;
+
+// ---------------- 玩家 ----------------
+function makePlayer() {
+  return {
+    x: LV.spawn[0], y: LV.spawn[1], vx: 0, vy: 0,
+    r: CFG.playerR, sx: 1, sy: 1, face: 1,
+    grounded: false, onInk: false, onPlat: false,
+    coyote: 0, jbuf: 0, ink: LV.spawnInk || CFG.inkMax,
+    inv: 0, dead: false, deadT: 0, inkDist: 0, breathe: Math.random() * 6,
+    fellJump: false
+  };
+}
+
+function startLevel(i) {
+  levelIdx = i; LV = LEVELS[i];
+  pts = []; particles = []; rings = []; stampAnim = null;
+  drops = [];
+  for (var k = 0; k < LV.drops.length; k++) drops.push({ x: LV.drops[k][0], y: LV.drops[k][1], got: false, t: Math.random() * 6 });
+  bugs = [];
+  for (var b = 0; b < LV.bugs.length; b++) bugs.push({ x: LV.bugs[b][0], y: LV.bugs[b][1], hx: LV.bugs[b][0], hy: LV.bugs[b][1], vx: 0, vy: 0, alive: true, eatT: 0, t: Math.random() * 6 });
+  player = makePlayer();
+  camX = clamp(player.x - VW * 0.42, 0, LV.w - VW);
+  state = 'play'; stateT = 0;
+}
+
+function respawn() {
+  player = makePlayer();
+  // 死亡不清墨：摔过的跟头会变成桥（墨龄在死亡期间冻结）
+  particles = []; rings = [];
+  for (var k = 0; k < LV.drops.length; k++) drops[k].got = false;
+  for (var b = 0; b < bugs.length; b++) { bugs[b].alive = true; bugs[b].x = bugs[b].hx; bugs[b].y = bugs[b].hy; }
+  camX = clamp(player.x - VW * 0.42, 0, LV.w - VW);
+}
+
+// ---------------- 墨迹 ----------------
+function addPt(x, y, speed) {
+  // 速度决定枯湿：快=枯笔(细淡断续)，慢=湿墨(粗浓)
+  var wet = clamp(1 - speed / 340, 0, 1);
+  var r = lerp(2.6, 6.2, wet);
+  if (Math.random() > wet * 0.9 + 0.1) r *= 0.8; // 枯笔微断续
+  pts.push({ x: x, y: y, r: r, age: 0 });
+  if (pts.length > 1500) pts.shift();
+}
+function removePt(i) { pts.splice(i, 1); }
+
+// ---------------- 粒子 ----------------
+function burst(x, y, n, opt) {
+  opt = opt || {};
+  for (var i = 0; i < n; i++) {
+    var a = opt.dir !== undefined ? opt.dir + rnd(-0.9, 0.9) : rnd(0, Math.PI * 2);
+    var sp = rnd(opt.spMin || 40, opt.spMax || 180);
+    particles.push({
+      x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+      life: 0, max: rnd(0.3, opt.life || 0.7), r: rnd(1.5, opt.r || 4),
+      grav: opt.grav !== undefined ? opt.grav : 900, col: opt.col || INK
+    });
+  }
+}
+function ring(x, y, opt) { rings.push({ x: x, y: y, r: opt && opt.r0 || 6, vr: opt && opt.vr || 220, life: 0, max: opt && opt.max || 0.45, col: opt && opt.col || INK }); }
+
+// ---------------- 物理更新 ----------------
+function physics(dt) {
+  var p = player;
+  if (p.dead) {
+    p.deadT -= dt;
+    if (p.deadT <= 0) { save.deaths++; writeSave(); respawn(); }
+    return;
+  }
+  var left = keys['ArrowLeft'] || keys['KeyA'], right = keys['ArrowRight'] || keys['KeyD'];
+  var jumpHeld = keys['Space'] || keys['KeyW'] || keys['ArrowUp'];
+  var acc = CFG.moveAccel * (p.grounded ? 1 : CFG.airCtrl);
+  if (left) { p.vx -= acc * dt; p.face = -1; }
+  if (right) { p.vx += acc * dt; p.face = 1; }
+  if (!left && !right && p.grounded) {
+    var f = CFG.fric * dt;
+    if (Math.abs(p.vx) <= f) p.vx = 0; else p.vx -= Math.sign(p.vx) * f;
+  }
+  p.vx = clamp(p.vx, -CFG.moveMax, CFG.moveMax);
+
+  // 风区
+  var inWind = false;
+  for (var w = 0; w < LV.winds.length; w++) {
+    var wd = LV.winds[w];
+    if (p.x > wd[0] && p.x < wd[0] + wd[2] && p.y > wd[1] && p.y < wd[1] + wd[3]) {
+      p.vx += wd[4] * CFG.windForce * dt; inWind = true;
+    }
+  }
+  AudioSys.setWind(inWind ? 0.05 : 0);
+
+  // 跳跃缓冲 & 土狼时间
+  if (pressed['Space'] || pressed['KeyW'] || pressed['ArrowUp']) p.jbuf = CFG.jumpBuf;
+  p.jbuf -= dt; p.coyote -= dt;
+  if (p.jbuf > 0 && p.coyote > 0) {
+    p.vy = CFG.jumpV; p.jbuf = 0; p.coyote = 0; p.grounded = false; p.onInk = false; p.onPlat = false;
+    p.ink = Math.max(0, p.ink - CFG.inkJumpCost);
+    p.sx = 0.8; p.sy = 1.28;
+    burst(p.x, p.y + p.r, 6, { dir: Math.PI / 2, spMin: 30, spMax: 120, life: 0.4, r: 3 });
+    AudioSys.jump();
+  }
+  if (!jumpHeld && p.vy < 0) p.vy *= Math.max(0, 1 - CFG.jumpCut * dt * 12);
+
+  var wasGrounded = p.grounded;
+  var sub = 2, sdt = dt / sub;
+  for (var s = 0; s < sub; s++) {
+    var prevFoot = p.y + p.r;
+    p.vy += CFG.grav * sdt;
+    p.vy = Math.min(p.vy, 900);
+    // X 轴
+    p.x += p.vx * sdt;
+    p.x = clamp(p.x, p.r, LV.w - p.r);
+    for (var pi = 0; pi < LV.plats.length; pi++) {
+      var pl = LV.plats[pi];
+      if (aabbPlayer(pl, p)) {
+        if (p.vx > 0) p.x = pl[0] - p.r * 0.7; else if (p.vx < 0) p.x = pl[0] + pl[2] + p.r * 0.7;
+        p.vx = 0;
+      }
+    }
+    // Y 轴
+    p.y += p.vy * sdt;
+    p.grounded = false; p.onInk = false; p.onPlat = false;
+    for (var pj = 0; pj < LV.plats.length; pj++) {
+      var pp = LV.plats[pj];
+      if (aabbPlayer(pp, p)) {
+        if (p.vy >= 0 && prevFoot <= pp[1] + 10) {
+          p.y = pp[1] - p.r; p.vy = 0; p.grounded = true; p.onPlat = true;
+        } else if (p.vy < 0) {
+          p.y = pp[1] + pp[3] + p.r; p.vy = 0;
+        } else {
+          // 侧向嵌入（罕见），推出
+          if (p.x < pp[0] + pp[2] / 2) p.x = pp[0] - p.r * 0.7; else p.x = pp[0] + pp[2] + p.r * 0.7;
+        }
+      }
+    }
+    // 墨点单向平台（下落从上方穿过时接住；刚落的墨 age<inkSettle 不可踩）
+    if (p.vy >= 0) {
+      var foot = p.y + p.r;
+      for (var q = 0; q < pts.length; q++) {
+        var pt = pts[q];
+        if (pt.age >= CFG.inkSettle && Math.abs(pt.x - p.x) < pt.r + 13 && prevFoot <= pt.y + 6 && foot >= pt.y - 2) {
+          p.y = pt.y - p.r; p.vy = 0; p.grounded = true; p.onInk = true;
+          break;
+        }
+      }
+    }
+  }
+  if (p.grounded) {
+    p.coyote = CFG.coyote;
+    if (!wasGrounded) {
+      var lv = clamp((p.vy || 300) / 900, 0, 1);
+      p.sx = 1 + lv * 0.4; p.sy = 1 - lv * 0.4;
+      burst(p.x, p.y + p.r, 4 + Math.floor(lv * 10), { dir: -Math.PI / 2, spMin: 20, spMax: 90 + lv * 160, life: 0.5, r: 3.5 });
+      ring(p.x, p.y + p.r, { r0: 4, vr: 130 + lv * 160 });
+      AudioSys.land(lv);
+      if (lv > 0.55) shake = Math.max(shake, lv * 3);
+    }
+  }
+  // squash 恢复
+  p.sx += (1 - p.sx) * Math.min(1, dt * 12);
+  p.sy += (1 - p.sy) * Math.min(1, dt * 12);
+  p.breathe += dt;
+  if (p.inv > 0) p.inv -= dt;
+
+  // 留墨 & 耗墨
+  var moving = Math.abs(p.vx) > 30 || Math.abs(p.vy) > 30;
+  if (p.grounded && p.onInk && moving) {
+    // 站墨行走：边走边补桥
+    p.inkDist += Math.abs(p.vx) * dt;
+    while (p.inkDist >= CFG.inkGap) {
+      p.inkDist -= CFG.inkGap;
+      addPt(p.x, p.y + p.r, Math.abs(p.vx));
+    }
+    p.ink = Math.max(0, p.ink - CFG.inkRunCost * dt);
+  } else if (!p.grounded && p.vy > 0) {
+    // 空中下落留墨
+    p.inkDist += Math.max(Math.abs(p.vx), Math.abs(p.vy) * 0.6) * dt;
+    while (p.inkDist >= CFG.inkGap) {
+      p.inkDist -= CFG.inkGap;
+      addPt(p.x, p.y + p.r * 0.6, Math.abs(p.vx) + Math.abs(p.vy) * 0.4);
+    }
+    p.ink = Math.max(0, p.ink - CFG.inkFallCost * dt);
+  } else if (p.grounded && !moving) {
+    p.ink = Math.min(CFG.inkMax, p.ink + CFG.inkRegen * dt);
+  } else if (p.grounded && p.onPlat && moving) {
+    p.ink = Math.min(CFG.inkMax, p.ink + CFG.inkRegen * 0.5 * dt);
+  }
+
+  // 危险：尖刺
+  if (p.inv <= 0) {
+    for (var si = 0; si < LV.spikes.length; si++) {
+      var sp = LV.spikes[si];
+      if (p.x + p.r * 0.6 > sp[0] && p.x - p.r * 0.6 < sp[0] + sp[2] && p.y + p.r > sp[1] - 20 && p.y - p.r < sp[1] + 4) {
+        hurt(spikeKnock(sp));
+        break;
+      }
+    }
+  }
+
+  // 掉落死亡
+  if (p.y > 700) {
+    p.dead = true; p.deadT = 0.9;
+    burst(p.x, 690, 26, { spMin: 60, spMax: 260, life: 0.9, r: 5 });
+    ring(p.x, 690, { r0: 8, vr: 300, max: 0.6 });
+    AudioSys.die();
+  }
+
+  // 终点
+  var g = LV.goal;
+  if (Math.abs(p.x - g[0]) < 46 && Math.abs(p.y - (g[1] - 30)) < 70) reachGoal();
+}
+
+function aabbPlayer(pl, p) {
+  return p.x + p.r * 0.7 > pl[0] && p.x - p.r * 0.7 < pl[0] + pl[2] &&
+    p.y + p.r > pl[1] && p.y - p.r < pl[1] + pl[3];
+}
+function spikeKnock(sp) {
+  var dir = player.x < sp[0] + sp[2] / 2 ? -1 : 1;
+  return { vx: dir * 260, vy: -430, spike: true };
+}
+function hurt(k) {
+  var p = player;
+  p.ink = Math.max(0, p.ink - (k.spike ? CFG.spikeDmg : CFG.bugDmg));
+  p.vx = k.vx; p.vy = k.vy; p.inv = CFG.invuln; p.grounded = false;
+  p.sx = 1.4; p.sy = 0.7;
+  burst(p.x, p.y, 10, { spMin: 60, spMax: 200, life: 0.6, r: 4 });
+  shake = Math.max(shake, 4);
+  AudioSys.hurt();
+}
+
+// ---------------- 蠹 / 墨珠 ----------------
+function updateBugs(dt) {
+  for (var i = 0; i < bugs.length; i++) {
+    var b = bugs[i];
+    if (!b.alive) continue;
+    b.t += dt;
+    // 朝最近墨点漂
+    var best = -1, bd = CFG.bugEatR * CFG.bugEatR * 4;
+    for (var q = 0; q < pts.length; q++) {
+      var d = dist2(b.x, b.y, pts[q].x, pts[q].y);
+      if (d < bd) { bd = d; best = q; }
+    }
+    var tx, ty;
+    if (best >= 0) { tx = pts[best].x; ty = pts[best].y; }
+    else { tx = b.hx + Math.sin(b.t * 0.5) * 60; ty = b.hy + Math.sin(b.t * 0.8) * 18; }
+    var dx = tx - b.x, dy = ty - b.y, dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    b.x += dx / dl * CFG.bugSpeed * dt;
+    b.y += dy / dl * CFG.bugSpeed * dt + Math.sin(b.t * 3) * 8 * dt;
+    // 吃墨
+    b.eatT -= dt;
+    if (b.eatT <= 0 && best >= 0) {
+      b.eatT = CFG.bugEatDt;
+      var eaten = pts[best];
+      removePt(best);
+      burst(eaten.x, eaten.y, 3, { spMin: 10, spMax: 50, life: 0.3, r: 2 });
+    }
+    // 与玩家
+    var p = player;
+    if (!p.dead && dist2(b.x, b.y, p.x, p.y) < (18 + p.r) * (18 + p.r)) {
+      if (p.vy > 60 && p.y < b.y - 4) {
+        // 踩死
+        b.alive = false;
+        p.vy = -430; p.ink = Math.min(CFG.inkMax, p.ink + CFG.bugStompGain);
+        burst(b.x, b.y, 14, { spMin: 60, spMax: 220, life: 0.6, r: 4 });
+        ring(b.x, b.y, { r0: 6, vr: 200 });
+        AudioSys.bug();
+      } else if (p.inv <= 0) {
+        var dir = p.x < b.x ? -1 : 1;
+        hurt({ vx: dir * 240, vy: -300 });
+      }
+    }
+  }
+}
+function updateDrops(dt) {
+  var p = player;
+  for (var i = 0; i < drops.length; i++) {
+    var d = drops[i];
+    if (d.got) continue;
+    d.t += dt;
+    if (dist2(d.x, d.y, p.x, p.y) < 30 * 30) {
+      d.got = true;
+      p.ink = Math.min(CFG.inkMax, p.ink + CFG.dropInk);
+      burst(d.x, d.y, 8, { spMin: 30, spMax: 120, life: 0.5, r: 3, grav: -60 });
+      ring(d.x, d.y, { r0: 5, vr: 180, col: INK });
+      AudioSys.pick();
+    }
+  }
+}
+
+// ---------------- 墨迹老化（死亡期间冻龄：落墨的时刻凝固） ----------------
+function updateInk(dt) {
+  if (player.dead) return;
+  for (var i = pts.length - 1; i >= 0; i--) {
+    var pt = pts[i];
+    var mul = 1;
+    for (var w = 0; w < LV.winds.length; w++) {
+      var wd = LV.winds[w];
+      if (pt.x > wd[0] && pt.x < wd[0] + wd[2] && pt.y > wd[1] && pt.y < wd[1] + wd[3]) { mul = 1 / CFG.windLifeMul; break; }
+    }
+    pt.age += dt * mul;
+    if (pt.age > CFG.inkLife) removePt(i);
+  }
+}
+
+// ---------------- 盖章 ----------------
+function reachGoal() {
+  if (state !== 'play') return;
+  state = 'stamp'; stateT = 0;
+  stampAnim = { x: player.x, y: LV.goal[1] - 46, t: 0, stamp: LV.stamp, name: LV.name, played: false };
+  // 序列化本关笔意
+  var data = [];
+  for (var i = 0; i < pts.length; i++) data.push([Math.round(pts[i].x), Math.round(pts[i].y), Math.round(pts[i].r * 10)]);
+  save.scrolls[levelIdx] = { w: LV.w, data: data };
+  save.done[levelIdx] = true;
+  save.unlocked = Math.max(save.unlocked, Math.min(levelIdx + 2, 8));
+  writeSave();
+  AudioSys.clear();
+}
+
+// ---------------- 主更新 ----------------
+function update(dt) {
+  stateT += dt;
+  if (state === 'play') {
+    physics(dt);
+    updateInk(dt);
+    updateBugs(dt);
+    updateDrops(dt);
+    // 相机
+    var tx = clamp(player.x + player.face * 70 - VW * 0.42, 0, LV.w - VW);
+    camX += (tx - camX) * Math.min(1, dt * 5);
+    AudioSys.updateBGM(dt);
+  } else if (state === 'stamp') {
+    stampAnim.t += dt;
+    if (stampAnim.t > 1.5 && (pressed['Space'] || pressed['Enter'] || mouseLogic.click)) {
+      clearData = { stamp: LV.stamp, name: LV.name, deaths: save.deaths };
+      state = 'clear'; stateT = 0;
+    }
+  } else if (state === 'clear') {
+    if (stateT > 0.8 && (pressed['Space'] || pressed['Enter'] || mouseLogic.click || pressed['Escape'])) {
+      if (levelIdx === 7) { galleryT = 0; state = 'gallery'; }
+      else startLevel(levelIdx + 1);
+    }
+  } else if (state === 'gallery') {
+    galleryT += dt;
+    if (galleryT > 2 && (pressed['Space'] || pressed['Enter'] || pressed['Escape'] || mouseLogic.click)) { state = 'title'; stateT = 0; }
+  } else if (state === 'title') {
+    if (pressed['Space'] || pressed['Enter'] || mouseLogic.click || anyKeyFresh()) {
+      state = 'select'; stateT = 0;
+    }
+  } else if (state === 'select') {
+    if (pressed['ArrowRight'] || pressed['KeyD']) selectIdx = (selectIdx + 1) % 8;
+    if (pressed['ArrowLeft'] || pressed['KeyA']) selectIdx = (selectIdx + 7) % 8;
+    if (pressed['ArrowDown'] || pressed['KeyS']) selectIdx = (selectIdx + 4) % 8;
+    if (pressed['ArrowUp'] || pressed['KeyW']) selectIdx = (selectIdx + 4) % 8;
+    if (pressed['Space'] || pressed['Enter']) { if (selectIdx < save.unlocked) startLevel(selectIdx); }
+    if (mouseLogic.click) {
+      var hit = selectHit(mouseLogic.x, mouseLogic.y);
+      if (hit >= 0) {
+        if (hit < save.unlocked) startLevel(hit);
+        else selectIdx = hit;
+      }
+    }
+    if (pressed['Escape']) { state = 'title'; }
+  } else if (state === 'pause') {
+    if (pressed['Escape'] || pressed['Space']) { state = 'play'; }
+    if (pressed['KeyR']) { startLevel(levelIdx); }
+    if (pressed['KeyM']) AudioSys.toggleMute();
+  }
+  if (state === 'play') {
+    if (pressed['Escape']) { state = 'pause'; AudioSys.setWind(0); }
+    if (pressed['KeyR']) startLevel(levelIdx);
+    if (pressed['KeyM']) AudioSys.toggleMute();
+  }
+  // 粒子
+  for (var i = particles.length - 1; i >= 0; i--) {
+    var pt2 = particles[i];
+    pt2.life += dt;
+    if (pt2.life > pt2.max) { particles.splice(i, 1); continue; }
+    pt2.vy += pt2.grav * dt;
+    pt2.x += pt2.vx * dt; pt2.y += pt2.vy * dt;
+  }
+  for (var r = rings.length - 1; r >= 0; r--) {
+    var rg = rings[r];
+    rg.life += dt; rg.r += rg.vr * dt;
+    if (rg.life > rg.max) rings.splice(r, 1);
+  }
+  if (shake > 0) shake = Math.max(0, shake - dt * 22);
+  for (var k in pressed) delete pressed[k];
+  mouseLogic.click = false;
+}
+function anyKeyFresh() { return perfNow() - anyKeyAt < 0.05 && stateT > 0.5; }
+function perfNow() { return (typeof performance !== 'undefined' ? performance.now() : Date.now()) / 1000; }
+
+// ---------------- 渲染 ----------------
+var paperPattern = null;
+function makePaperPattern() {
+  var c = document.createElement('canvas'); c.width = 256; c.height = 256;
+  var g = c.getContext('2d');
+  g.fillStyle = PAPER; g.fillRect(0, 0, 256, 256);
+  for (var i = 0; i < 1600; i++) {
+    g.fillStyle = 'rgba(120,110,90,' + rnd(0.015, 0.05) + ')';
+    g.fillRect(Math.random() * 256, Math.random() * 256, rnd(0.5, 1.6), rnd(0.5, 1.6));
+  }
+  g.strokeStyle = 'rgba(140,130,105,0.045)'; g.lineWidth = 0.7;
+  for (var f = 0; f < 9; f++) {
+    g.beginPath();
+    var y0 = Math.random() * 256;
+    g.moveTo(0, y0);
+    g.bezierCurveTo(80, y0 + rnd(-8, 8), 170, y0 + rnd(-8, 8), 256, y0 + rnd(-6, 6));
+    g.stroke();
+  }
+  paperPattern = ctx.createPattern(c, 'repeat');
+}
+
+function mountainPath(seed, baseY, amp, x0, x1) {
+  ctx.beginPath();
+  ctx.moveTo(x0, baseY + 400);
+  for (var x = x0; x <= x1; x += 40) {
+    var n = Math.sin(x * 0.004 + seed) * 0.5 + Math.sin(x * 0.011 + seed * 2.3) * 0.3 + Math.sin(x * 0.027 + seed * 5.1) * 0.2;
+    ctx.lineTo(x, baseY - n * amp);
+  }
+  ctx.lineTo(x1, baseY + 400);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawInkDot(x, y, r, alpha) {
+  ctx.globalAlpha = alpha * 0.28;
+  ctx.beginPath(); ctx.arc(x, y, r * 1.75, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = alpha;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawInkTrail() {
+  ctx.fillStyle = INK;
+  var fadeStart = CFG.inkLife * CFG.inkFade;
+  ctx.beginPath();
+  for (var i = 0; i < pts.length; i++) {
+    var pt = pts[i];
+    if (pt.age < fadeStart) {
+      ctx.moveTo(pt.x + pt.r, pt.y);
+      ctx.arc(pt.x, pt.y, pt.r, 0, 6.2832);
+    }
+  }
+  ctx.globalAlpha = 0.92;
+  ctx.fill();
+  // 淡出中的点
+  for (var j = 0; j < pts.length; j++) {
+    var p2 = pts[j];
+    if (p2.age >= fadeStart) {
+      var a = 1 - (p2.age - fadeStart) / (CFG.inkLife - fadeStart);
+      drawInkDot(p2.x, p2.y, p2.r, a * 0.9);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlayer() {
+  var p = player;
+  if (p.dead) return;
+  if (p.inv > 0 && Math.floor(p.inv * 14) % 2 === 0) return; // 无敌闪烁
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  var br = Math.sin(p.breathe * 2.2) * 0.02;
+  ctx.scale(p.sx + br, p.sy - br);
+  ctx.fillStyle = INK;
+  ctx.globalAlpha = 0.22;
+  ctx.beginPath(); ctx.arc(0, 0, p.r * 1.8, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath(); ctx.arc(0, 0, p.r, 0, 6.2832); ctx.fill();
+  ctx.fillStyle = 'rgba(255,252,240,0.55)';
+  ctx.beginPath(); ctx.arc(-p.r * 0.3, -p.r * 0.35, 2.4, 0, 6.2832); ctx.fill();
+  ctx.restore();
+}
+
+function drawRock(pl) {
+  var x = pl[0], y = pl[1], w = pl[2], h = pl[3];
+  ctx.fillStyle = 'rgba(72,66,56,0.14)';
+  ctx.fillRect(x, y, w, h);
+  // 皴笔
+  ctx.strokeStyle = 'rgba(60,54,44,0.2)'; ctx.lineWidth = 1.2;
+  var seed = (x * 7 + y * 13) % 97;
+  for (var i = 0; i < w / 34; i++) {
+    var sx = x + 12 + ((seed + i * 47) % Math.max(w - 24, 1));
+    var sy = y + 10 + ((seed * (i + 3)) % Math.max(h - 22, 1));
+    ctx.beginPath(); ctx.moveTo(sx, sy);
+    ctx.quadraticCurveTo(sx + 8, sy + 4, sx + 15, sy + 2);
+    ctx.stroke();
+  }
+  // 顶缘重墨（可站面）
+  ctx.strokeStyle = 'rgba(55,50,42,0.6)'; ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.moveTo(x, y + 1.2);
+  ctx.lineTo(x + w, y + 1.2);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(55,50,42,0.3)'; ctx.lineWidth = 1.4;
+  ctx.strokeRect(x + 0.7, y + 0.7, w - 1.4, h - 1.4);
+}
+
+function drawSpikes() {
+  for (var i = 0; i < LV.spikes.length; i++) {
+    var sp = LV.spikes[i];
+    var n = Math.floor(sp[2] / 13);
+    ctx.fillStyle = 'rgba(50,45,38,0.75)';
+    ctx.beginPath();
+    for (var k = 0; k < n; k++) {
+      var x0 = sp[0] + k * 13;
+      ctx.moveTo(x0, sp[1]);
+      ctx.lineTo(x0 + 6.5, sp[1] - 24 - (k % 3) * 4);
+      ctx.lineTo(x0 + 13, sp[1]);
+    }
+    ctx.fill();
+  }
+}
+
+function drawWinds() {
+  for (var i = 0; i < LV.winds.length; i++) {
+    var wd = LV.winds[i];
+    ctx.strokeStyle = 'rgba(80,72,60,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([10, 8]);
+    ctx.strokeRect(wd[0], wd[1], wd[2], wd[3]);
+    ctx.setLineDash([]);
+    // 飘纹
+    var t = perfNow();
+    ctx.strokeStyle = 'rgba(80,72,60,0.16)';
+    ctx.lineWidth = 1;
+    for (var k = 0; k < 7; k++) {
+      var yy = wd[1] + 40 + ((k * 137 + Math.floor(t * 30) * 17) % (wd[3] - 60));
+      var xx = wd[0] + ((t * 260 + k * 260) % (wd[2] + 120)) - 60;
+      ctx.beginPath();
+      ctx.moveTo(xx, yy); ctx.quadraticCurveTo(xx + 26, yy - 3, xx + 52, yy);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawDrops() {
+  var t = perfNow();
+  for (var i = 0; i < drops.length; i++) {
+    var d = drops[i];
+    if (d.got) continue;
+    var fy = d.y + Math.sin(d.t * 2.4 + i) * 5;
+    ctx.fillStyle = INK;
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath(); ctx.arc(d.x, fy, 13, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath(); ctx.arc(d.x, fy, 6.5, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = '#fffbe9';
+    ctx.beginPath(); ctx.arc(d.x - 2, fy - 2, 1.6, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1; ctx.fillStyle = INK;
+  }
+}
+
+function drawBugs() {
+  for (var i = 0; i < bugs.length; i++) {
+    var b = bugs[i];
+    if (!b.alive) continue;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(Math.sin(b.t * 4) * 0.15);
+    ctx.fillStyle = 'rgba(70,50,40,0.95)';
+    // 蠹：细长节虫
+    ctx.beginPath(); ctx.ellipse(0, 0, 12, 6, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(-11, Math.sin(b.t * 6) * 1.5, 5, 3.5, 0, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(11, Math.cos(b.t * 6) * 1.5, 5, 3.5, 0, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = 'rgba(240,232,210,0.7)';
+    ctx.beginPath(); ctx.arc(4, -2, 1.4, 0, 6.2832); ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawGoal() {
+  var g = LV.goal;
+  var t = perfNow();
+  // 石台
+  ctx.fillStyle = 'rgba(72,66,56,0.18)';
+  ctx.fillRect(g[0] - 34, g[1] - 16, 68, 16);
+  ctx.strokeStyle = 'rgba(55,50,42,0.5)'; ctx.lineWidth = 2;
+  ctx.strokeRect(g[0] - 34, g[1] - 16, 68, 16);
+  // 悬浮印章
+  var fy = g[1] - 64 + Math.sin(t * 1.8) * 5;
+  var glow = 0.55 + Math.sin(t * 1.8) * 0.18;
+  ctx.save();
+  ctx.translate(g[0], fy);
+  ctx.globalAlpha = glow;
+  ctx.fillStyle = RED;
+  roundRect(-24, -24, 48, 48, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(120,30,20,0.8)'; ctx.lineWidth = 2;
+  roundRect(-18, -18, 36, 36, 4); ctx.stroke();
+  ctx.fillStyle = PAPER;
+  ctx.font = '26px "KaiTi","STKaiti","楷体",serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(LV.stamp, 0, 2);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawTips() {
+  if (!LV.tip) return;
+  ctx.font = '20px "KaiTi","STKaiti","楷体",serif';
+  ctx.textAlign = 'center';
+  for (var i = 0; i < LV.tip.length; i++) {
+    var t = LV.tip[i];
+    var d = Math.abs(player.x - t[0]);
+    var a = clamp(1.15 - d / 230, 0, 0.85);
+    if (a > 0.01) {
+      ctx.fillStyle = 'rgba(70,64,54,' + a + ')';
+      ctx.fillText(t[2], t[0], t[1]);
+    }
+  }
+}
+
+function drawParticles() {
+  for (var i = 0; i < particles.length; i++) {
+    var p = particles[i];
+    ctx.globalAlpha = 1 - p.life / p.max;
+    ctx.fillStyle = p.col;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (var r = 0; r < rings.length; r++) {
+    var rg = rings[r];
+    ctx.globalAlpha = (1 - rg.life / rg.max) * 0.5;
+    ctx.strokeStyle = rg.col;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, 6.2832); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHUD() {
+  ctx.font = '15px "KaiTi","STKaiti","楷体",serif';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(70,64,54,0.9)';
+  ctx.fillText('墨', 22, 26);
+  var bx = 44, by = 21, bw = 200, bh = 9;
+  ctx.fillStyle = 'rgba(70,64,54,0.15)';
+  roundRect(bx, by, bw, bh, 4.5); ctx.fill();
+  var frac = player.ink / CFG.inkMax;
+  var low = frac < 0.25;
+  ctx.fillStyle = low ? (Math.sin(perfNow() * 9) > 0 ? RED : INK) : INK;
+  if (frac > 0.01) { roundRect(bx, by, Math.max(bw * frac, 6), bh, 4.5); ctx.fill(); }
+  ctx.strokeStyle = 'rgba(70,64,54,0.4)'; ctx.lineWidth = 1;
+  roundRect(bx - 0.5, by - 0.5, bw + 1, bh + 1, 5); ctx.stroke();
+  // 关名
+  ctx.textAlign = 'right';
+  ctx.font = '17px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.85)';
+  ctx.fillText(LV.name, VW - 24, 26);
+  ctx.font = '13px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.45)';
+  ctx.fillText('R 重研 · Esc 歇笔 · M 静音', VW - 24, 48);
+}
+
+function drawScrollThumb(data, x, y, w, h) {
+  // 缩略重绘墨迹
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.fillStyle = 'rgba(250,246,232,0.7)';
+  ctx.fillRect(x, y, w, h);
+  if (data && data.data && data.data.length) {
+    var d = data.data;
+    var pad = 10;
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9;
+    for (var i = 0; i < d.length; i++) {
+      if (d[i][0] < minX) minX = d[i][0]; if (d[i][0] > maxX) maxX = d[i][0];
+      if (d[i][1] < minY) minY = d[i][1]; if (d[i][1] > maxY) maxY = d[i][1];
+    }
+    var sw = Math.max(maxX - minX, 1), sh = Math.max(maxY - minY, 1);
+    var sc = Math.min((w - pad * 2) / sw, (h - pad * 2) / sh);
+    var ox = x + (w - sw * sc) / 2 - minX * sc;
+    var oy = y + (h - sh * sc) / 2 - minY * sc;
+    ctx.fillStyle = INK;
+    ctx.beginPath();
+    for (var k = 0; k < d.length; k++) {
+      var rr = Math.max(d[k][2] / 10 * sc * 2.2, 0.7);
+      ctx.moveTo(ox + d[k][0] * sc + rr, oy + d[k][1] * sc);
+      ctx.arc(ox + d[k][0] * sc, oy + d[k][1] * sc, rr, 0, 6.2832);
+    }
+    ctx.globalAlpha = 0.85; ctx.fill(); ctx.globalAlpha = 1;
+  } else {
+    ctx.fillStyle = 'rgba(70,64,54,0.35)';
+    ctx.font = '14px "KaiTi","STKaiti","楷体",serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('（空卷）', x + w / 2, y + h / 2);
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(70,64,54,0.5)'; ctx.lineWidth = 1.4;
+  ctx.strokeRect(x, y, w, h);
+}
+
+function drawStampShape(x, y, size, ch, alpha) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = RED;
+  roundRect(-size / 2, -size / 2, size, size, size * 0.14); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,240,230,0.75)'; ctx.lineWidth = 2;
+  roundRect(-size * 0.36, -size * 0.36, size * 0.72, size * 0.72, size * 0.08); ctx.stroke();
+  ctx.fillStyle = PAPER;
+  ctx.font = Math.floor(size * 0.52) + 'px "KaiTi","STKaiti","楷体",serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(ch, 0, size * 0.04);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+// ---------------- 场景渲染总入口 ----------------
+function render() {
+  var W = canvas.width / DPR, H = canvas.height / DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // 纸底全屏
+  ctx.fillStyle = PAPER;
+  ctx.fillRect(0, 0, W, H);
+  if (paperPattern) { ctx.fillStyle = paperPattern; ctx.fillRect(0, 0, W, H); }
+
+  // 逻辑视口居中
+  var scale = Math.min(W / VW, H / VH);
+  var ox = (W - VW * scale) / 2, oy = (H - VH * scale) / 2;
+  ctx.setTransform(DPR * scale, 0, 0, DPR * scale, DPR * ox, DPR * oy);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
+
+  if (state === 'title') renderTitle();
+  else if (state === 'select') renderSelect();
+  else if (state === 'gallery') renderGallery();
+  else renderGame();
+  ctx.restore();
+
+  // 卷轴轴头（全屏坐标）
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawRollers(W, H, ox, oy, scale);
+}
+
+function renderGame() {
+  var shx = shake > 0 ? rnd(-shake, shake) : 0;
+  var shy = shake > 0 ? rnd(-shake, shake) : 0;
+  ctx.save();
+  ctx.translate(-camX + shx, shy);
+
+  // 远山（视差）
+  ctx.fillStyle = 'rgba(90,84,70,0.09)';
+  mountainPath(1.7, 470, 130, camX * 0.8, camX * 0.8 + VW + 200);
+  ctx.fillStyle = 'rgba(90,84,70,0.15)';
+  mountainPath(4.2, 520, 90, camX * 0.55, camX * 0.55 + VW + 200);
+
+  for (var i = 0; i < LV.plats.length; i++) drawRock(LV.plats[i]);
+  drawWinds();
+  drawSpikes();
+  drawInkTrail();
+  drawDrops();
+  drawBugs();
+  drawGoal();
+  drawTips();
+  drawPlayer();
+  drawParticles();
+  ctx.restore();
+
+  drawHUD();
+
+  // 盖章动画
+  if (state === 'stamp' && stampAnim) {
+    var t = stampAnim.t;
+    var sy2;
+    if (t < 0.45) { sy2 = stampAnim.y - 280 * (1 - Math.pow(t / 0.45, 2)); }
+    else { sy2 = stampAnim.y; }
+    var a2 = clamp(t * 4, 0, 1);
+    if (t >= 0.45 && !stampAnim.played) {
+      stampAnim.played = true;
+      shake = 5;
+      burst(stampAnim.x, stampAnim.y, 12, { dir: -Math.PI / 2, spMin: 60, spMax: 200, life: 0.6, r: 3, col: RED });
+      AudioSys.stamp();
+    }
+    drawStampShape(stampAnim.x - camX + shx, sy2 + shy, 62, stampAnim.stamp, a2);
+    if (t > 0.6) {
+      ctx.font = '30px "KaiTi","STKaiti","楷体",serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(70,64,54,' + clamp((t - 0.6) * 2, 0, 0.9) + ')';
+      ctx.fillText('卷成', VW / 2, 120);
+    }
+  }
+
+  // clear 卷轴
+  if (state === 'clear' && clearData) {
+    var a = clamp(stateT * 2.2, 0, 1);
+    var cw = 580, chh = 260;
+    var cx = VW / 2 - cw / 2, cy = VH / 2 - chh / 2;
+    ctx.globalAlpha = a * 0.55;
+    ctx.fillStyle = 'rgba(50,46,40,0.5)';
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#f6efdc';
+    ctx.fillRect(cx, cy, cw, chh);
+    if (paperPattern) { ctx.save(); ctx.globalAlpha = a * 0.8; ctx.fillStyle = paperPattern; ctx.fillRect(cx, cy, cw, chh); ctx.restore(); }
+    ctx.strokeStyle = 'rgba(70,64,54,0.6)'; ctx.lineWidth = 2;
+    ctx.strokeRect(cx, cy, cw, chh);
+    ctx.font = '20px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = 'rgba(70,64,54,0.85)';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(clearData.name + ' · 笔意', cx + 24, cy + 30);
+    drawScrollThumb(save.scrolls[levelIdx], cx + 24, cy + 52, 300, 180);
+    drawStampShape(cx + cw - 110, cy + 120, 84, clearData.stamp, a);
+    ctx.font = '15px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = 'rgba(70,64,54,0.6)';
+    ctx.textAlign = 'center';
+    ctx.fillText('落墨 ' + save.deaths + ' 次', cx + cw - 110, cy + 190);
+    if (stateT > 0.8) {
+      ctx.fillStyle = 'rgba(70,64,54,' + (0.45 + Math.sin(perfNow() * 4) * 0.2) + ')';
+      ctx.fillText('按 空格 展开下一卷', cx + cw / 2, cy + chh + 34);
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function renderTitle() {
+  var t = perfNow();
+  // 远山
+  ctx.fillStyle = 'rgba(90,84,70,0.1)';
+  mountainPath(2.6, 500, 120, 0, VW);
+  ctx.fillStyle = 'rgba(90,84,70,0.16)';
+  mountainPath(7.7, 545, 80, 0, VW);
+  // 一滴墨的入场晕开
+  var dropY = 150 + (t % 4) * 40;
+  if (t % 4 < 1.2) {
+    ctx.globalAlpha = 0.25 * (1 - (t % 4) / 1.2);
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(VW / 2, dropY, 4 + (t % 4) * 18, 0, 6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = INK;
+  ctx.font = '110px "KaiTi","STKaiti","楷体",serif';
+  ctx.globalAlpha = 0.12;
+  ctx.fillText('墨 途', VW / 2 + 5, 208);
+  ctx.globalAlpha = 0.92;
+  ctx.fillText('墨 途', VW / 2, 203);
+  ctx.font = '21px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.75)';
+  ctx.fillText('走过的路，会成为你的桥 · 摔过的跟头也是', VW / 2, 292);
+  ctx.font = '16px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,' + (0.4 + Math.sin(t * 2.6) * 0.22) + ')';
+  ctx.fillText('—— 按 空格 展卷 ——', VW / 2, 372);
+  ctx.font = '14px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.5)';
+  ctx.fillText('←→ 移动 · 空格 跳（长按更高） · R 重研 · M 静音', VW / 2, 545);
+  if (save.done[7]) {
+    ctx.fillStyle = 'rgba(168,64,47,' + (0.55 + Math.sin(t * 2.2) * 0.25) + ')';
+    ctx.fillText('按 G 观卷 · 行墨八卷', VW / 2, 400);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function selectHit(lx, ly) {
+  for (var i = 0; i < 8; i++) {
+    var col = i % 4, row = Math.floor(i / 4);
+    var x = VW / 2 - 2 * 130 + col * 130 + 55;
+    var y = 190 + row * 160;
+    if (lx > x - 55 && lx < x + 55 && ly > y - 55 && ly < y + 55) return i;
+  }
+  return -1;
+}
+function renderSelect() {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '30px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.85)';
+  ctx.fillText('展卷 · 择一而行', VW / 2, 78);
+  for (var i = 0; i < 8; i++) {
+    var col = i % 4, row = Math.floor(i / 4);
+    var x = VW / 2 - 2 * 130 + col * 130 + 55;
+    var y = 190 + row * 160;
+    var unlocked = i < save.unlocked;
+    var sel = i === selectIdx;
+    if (sel) {
+      ctx.strokeStyle = 'rgba(168,64,47,0.55)'; ctx.lineWidth = 1.6;
+      ctx.setLineDash([6, 5]);
+      ctx.strokeRect(x - 52, y - 52, 104, 104);
+      ctx.setLineDash([]);
+    }
+    if (unlocked) {
+      drawStampShape(x, y, 74, LEVELS[i].stamp, save.done[i] ? 0.92 : 0.5);
+      if (!save.done[i]) {
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = 'rgba(240,232,210,0.9)';
+        ctx.font = '13px "KaiTi","STKaiti","楷体",serif';
+        ctx.fillText('未达', x, y + 24);
+        ctx.globalAlpha = 1;
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(70,64,54,0.3)'; ctx.lineWidth = 2;
+      roundRect(x - 34, y - 34, 68, 68, 9); ctx.stroke();
+      ctx.fillStyle = 'rgba(70,64,54,0.3)';
+      ctx.font = '24px "KaiTi","STKaiti","楷体",serif';
+      ctx.fillText('·', x, y);
+    }
+    ctx.font = '15px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = unlocked ? 'rgba(70,64,54,0.7)' : 'rgba(70,64,54,0.3)';
+    ctx.fillText(LEVELS[i].name.split(' · ')[1], x, y + 62);
+  }
+  ctx.font = '14px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.45)';
+  ctx.fillText('←→ 选择 · 空格 进入 · Esc 回首', VW / 2, 545);
+}
+
+function renderGallery() {
+  var t = galleryT;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '30px "KaiTi","STKaiti","楷体",serif';
+  ctx.fillStyle = 'rgba(70,64,54,0.85)';
+  ctx.fillText('行墨八卷', VW / 2, 64);
+  for (var i = 0; i < 8; i++) {
+    var col = i % 4, row = Math.floor(i / 4);
+    var x = VW / 2 - 2 * 220 + col * 220;
+    var y = 110 + row * 205;
+    var a = clamp(t * 1.4 - i * 0.22, 0, 1);
+    ctx.globalAlpha = a;
+    drawScrollThumb(save.scrolls[i], x, y, 200, 138);
+    drawStampShape(x + 170, y + 116, 40, LEVELS[i].stamp, a * 0.9);
+    ctx.font = '14px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = 'rgba(70,64,54,0.7)';
+    ctx.fillText(LEVELS[i].name, x + 86, y + 158);
+    ctx.globalAlpha = 1;
+  }
+  var la = clamp(t - 2.2, 0, 1);
+  if (la > 0) {
+    ctx.globalAlpha = la;
+    ctx.font = '22px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = INK;
+    ctx.fillText('丙午年秋 · 鼠哥 行墨八卷 · 落墨 ' + save.deaths + ' 次', VW / 2, 552);
+    ctx.globalAlpha = 1;
+  }
+  if (t > 3) {
+    ctx.font = '14px "KaiTi","STKaiti","楷体",serif';
+    ctx.fillStyle = 'rgba(70,64,54,' + (0.4 + Math.sin(perfNow() * 3) * 0.2) + ')';
+    ctx.fillText('按 空格 收卷', VW / 2, 580);
+  }
+}
+
+function drawRollers(W, H, ox, oy, scale) {
+  // 左右轴头
+  var rw = Math.max(ox * 0.55, 14);
+  var grad = ctx.createLinearGradient(0, 0, rw, 0);
+  grad.addColorStop(0, '#4a3f33'); grad.addColorStop(1, '#2e2820');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, rw, H);
+  var grad2 = ctx.createLinearGradient(W, 0, W - rw, 0);
+  grad2.addColorStop(0, '#4a3f33'); grad2.addColorStop(1, '#2e2820');
+  ctx.fillStyle = grad2;
+  ctx.fillRect(W - rw, 0, rw, H);
+  ctx.fillStyle = 'rgba(212,186,130,0.35)';
+  ctx.fillRect(rw - 2, 0, 1.6, H);
+  ctx.fillRect(W - rw, 0, 1.6, H);
+  // 视口外淡影
+  if (ox > 0) {
+    ctx.fillStyle = 'rgba(60,54,44,0.08)';
+    ctx.fillRect(rw, 0, ox - rw, H);
+    ctx.fillRect(W - ox, 0, ox - rw, H);
+  }
+}
+
+// ---------------- 主循环 ----------------
+var DPR = 1, lastT = 0;
+function frame(t) {
+  var now = t / 1000;
+  var dt = Math.min(now - lastT, 0.04);
+  lastT = now;
+  if (dt > 0) update(dt);
+  render();
+  frameCount++;
+  requestAnimationFrame(frame);
+}
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(window.innerWidth * DPR);
+  canvas.height = Math.floor(window.innerHeight * DPR);
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+}
+function toLogic(cx, cy) {
+  var W = canvas.width / DPR, H = canvas.height / DPR;
+  var scale = Math.min(W / VW, H / VH);
+  var ox = (W - VW * scale) / 2, oy = (H - VH * scale) / 2;
+  return { x: (cx / DPR - ox) / scale, y: (cy / DPR - oy) / scale };
+}
+
+function boot() {
+  canvas = document.getElementById('cv');
+  ctx = canvas.getContext('2d');
+  makePaperPattern();
+  loadSave();
+  resize();
+  window.addEventListener('resize', resize);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+  window.addEventListener('blur', function () { if (state === 'play') state = 'pause'; for (var k in keys) keys[k] = false; });
+  canvas.addEventListener('mousemove', function (e) { var l = toLogic(e.clientX, e.clientY); mouseLogic.x = l.x; mouseLogic.y = l.y; });
+  canvas.addEventListener('mousedown', function (e) { AudioSys.init(); AudioSys.resume(); mouseLogic.click = true; anyKeyAt = perfNow(); });
+  lastT = perfNow();
+  requestAnimationFrame(frame);
+}
+
+if (typeof document !== 'undefined' && document.getElementById) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+}
+
+// 冒烟测试钩子
+if (typeof window !== 'undefined') {
+  window.__MOTU__ = {
+    CFG: CFG, LEVELS: LEVELS, save: save, loadSave: loadSave, writeSave: writeSave,
+    startLevel: startLevel, update: update, render: render,
+    state: function () { return state; }, player: function () { return player; },
+    pts: function () { return pts; }, bugs: function () { return bugs; },
+    drops: function () { return drops; }, levelIdx: function () { return levelIdx; },
+    setKey: function (c, v) { keys[c] = v; if (v) pressed[c] = true; },
+    clearKeys: function () { for (var k in keys) delete keys[k]; for (var k2 in pressed) delete pressed[k2]; },
+    clearPressed: function () { for (var k in pressed) delete pressed[k]; },
+    addPt: addPt, hurt: hurt,
+    boot: boot, setCanvas: function (c, d) { canvas = c; ctx = c.getContext('2d'); DPR = d || 1; },
+    setState: function (s) { state = s; },
+    getSave: function () { return save; }
+  };
+}
+
+</script>
+</body>
+</html>

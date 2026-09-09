@@ -11,6 +11,7 @@
 | CS:GO 沙漠练枪场 | `games/csgo-dust2/` | FPS 练枪 |
 | 凝时 STILL | `games/still/` | 弹幕 · 时停 |
 | 重力花园 | `games/gravity-garden/` | 物理解压 |
+| 墨途 | `games/motu/` | 水墨平台 |
 
 ## 怎么添加新游戏
 
