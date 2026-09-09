@@ -1,0 +1,12 @@
+# node
+node_modules/
+npm-cache/
+*.log
+
+# local scripts that may contain tokens
+推送更新.bat
+scripts/push.ps1
+
+# os
+Thumbs.db
+.DS_Store

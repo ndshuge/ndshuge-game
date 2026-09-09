@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>鼠哥游戏厅 · ndshuge-game</title>
+<style>
+  :root {
+    --bg: #0b0f17;
+    --panel: #131a28;
+    --panel2: #1a2336;
+    --text: #e8edf6;
+    --dim: #8fa0bd;
+    --accent: #4cc9f0;
+    --accent2: #f72585;
+    --gold: #ffd166;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(1200px 600px at 80% -10%, rgba(247,37,133,.14), transparent 60%),
+      radial-gradient(1000px 500px at 0% 110%, rgba(76,201,240,.12), transparent 60%);
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { text-align: center; margin-bottom: 48px; }
+  .logo {
+    font-size: 15px; letter-spacing: 6px; color: var(--accent);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 12px;
+  }
+  h1 { font-size: 42px; font-weight: 800; letter-spacing: 2px; }
+  h1 .g { color: var(--accent2); }
+  .sub { color: var(--dim); margin-top: 14px; font-size: 15px; line-height: 1.7; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 22px;
+  }
+  .card {
+    background: linear-gradient(160deg, var(--panel), var(--panel2));
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 18px;
+    padding: 26px 24px 22px;
+    display: flex; flex-direction: column; gap: 12px;
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    text-decoration: none; color: inherit; position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0; transition: opacity .25s ease;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(76,201,240,.35);
+    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  }
+  .card:hover::before { opacity: 1; }
+  .ico { font-size: 38px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+  .t { font-size: 20px; font-weight: 700; }
+  .d { color: var(--dim); font-size: 13.5px; line-height: 1.65; flex: 1; }
+  .tag { align-self: flex-start; font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
+    background: rgba(76,201,240,.12); color: var(--accent); border: 1px solid rgba(76,201,240,.25); }
+  .play {
+    margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--gold);
+    display: flex; align-items: center; gap: 6px;
+  }
+  footer { text-align: center; color: var(--dim); font-size: 13px; margin-top: 56px; }
+  footer a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">ndshuge · game hub</div>
+    <h1>鼠哥<span class="g">游戏厅</span></h1>
+    <p class="sub">自己做的游戏，朋友随便玩。有 Bug 骂鼠哥，玩得爽也骂鼠哥。<br>新游戏会不断上架，欢迎常来。</p>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <a href="https://github.com/ndshuge/ndshuge-game">GitHub 仓库</a> · 鼠哥制作 © 2026
+  </footer>
+</div>
+
+<script>
+const games = [
+  {
+    ico: "🎯",
+    t: "CS:GO 沙漠练枪场",
+    d: "Dust2 经典地图靶场。多种模式的练枪挑战，跟手感极佳的 FPS 射击体验。",
+    tag: "FPS · 练枪",
+    href: "./games/csgo-dust2/"
+  },
+  {
+    ico: "🌌",
+    t: "重力花园",
+    d: "暮色花园里撒下刚体，看它们真实坠落碰撞堆叠；右键引爆掀飞一切，空格翻转重力。",
+    tag: "物理 · 解压",
+    href: "./games/gravity-garden/"
+  },
+  {
+    ico: "🏎️",
+    t: "地平线旷野",
+    d: "开放世界驾驶。旷野上自由驰骋，感受速度与地形的碰撞。",
+    tag: "驾驶 · 开放世界",
+    href: "./games/horizon-drift/"
+  }
+];
+
+const grid = document.getElementById("grid");
+games.forEach(g => {
+  const a = document.createElement("a");
+  a.className = "card";
+  a.href = g.href;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.innerHTML = `
+    <div class="ico">${g.ico}</div>
+    <div class="t">${g.t}</div>
+    <div class="tag">${g.tag}</div>
+    <div class="d">${g.d}</div>
+    <div class="play">▶ 开玩</div>`;
+  grid.appendChild(a);
+});
+</script>
+</body>
+</html>
