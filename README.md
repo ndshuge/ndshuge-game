@@ -9,8 +9,8 @@
 | 游戏 | 目录 | 类型 |
 | --- | --- | --- |
 | CS:GO 沙漠练枪场 | `games/csgo-dust2/` | FPS 练枪 |
+| 凝时 STILL | `games/still/` | 弹幕 · 时停 |
 | 重力花园 | `games/gravity-garden/` | 物理解压 |
-| 地平线旷野 | `games/horizon-drift/` | 驾驶 |
 
 ## 怎么添加新游戏
 

@@ -2,129 +2,192 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>鼠哥游戏厅 · ndshuge-game</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E2318" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14170F" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="鼠哥军械库">
+<title>鼠哥军械库 · NDSHUGE ARMORY</title>
 <style>
-  :root {
-    --bg: #0b0f17;
-    --panel: #131a28;
-    --panel2: #1a2336;
-    --text: #e8edf6;
-    --dim: #8fa0bd;
-    --accent: #4cc9f0;
-    --accent2: #f72585;
-    --gold: #ffd166;
+  :root{
+    /* 底色：军绿卡其深底 */
+    --bg:#1E2318; --bg2:#262C1C; --bg3:#171B12;
+    /* 羊皮纸卡面 */
+    --card:#EAE0C4; --card2:#DDCEA8; --card-ink:#3A2E1F;
+    /* 铜金体系 */
+    --brass:#C4A25C; --brass-hi:#E4C87E; --brass-lo:#8A6F35;
+    /* 墨色 / 辅助 */
+    --ink:#EDE6D2; --ink2:#C9BE9E; --muted:#9A8E6B;
+    --olive:#565F38; --steel:#4C5C58; --sable:#6B5640;
+    --sep:rgba(233,224,196,.14);
+    --sh-card:0 2px 3px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.35);
+    --ease:cubic-bezier(.32,.72,0,1);
+    --ease-spring:cubic-bezier(.34,1.56,.64,1);
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    min-height: 100vh;
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro SC","Segoe UI Variable","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    background:var(--bg); color:var(--ink);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+    touch-action:manipulation;
     background-image:
-      radial-gradient(1200px 600px at 80% -10%, rgba(247,37,133,.14), transparent 60%),
-      radial-gradient(1000px 500px at 0% 110%, rgba(76,201,240,.12), transparent 60%);
+      radial-gradient(90% 60% at 50% -6%, rgba(196,162,92,.13), transparent 60%),
+      radial-gradient(70% 40% at 85% 110%, rgba(86,95,56,.35), transparent 65%);
   }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
-  header { text-align: center; margin-bottom: 48px; }
-  .logo {
-    font-size: 15px; letter-spacing: 6px; color: var(--accent);
-    text-transform: uppercase; font-weight: 600; margin-bottom: 12px;
+  /* 纸张噪点做旧层 */
+  .grain{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.28'/></svg>");}
+  .wrap{position:relative;z-index:1;max-width:620px;margin:0 auto;
+    padding:calc(env(safe-area-inset-top,0px) + 16px) 18px calc(env(safe-area-inset-bottom,0px) + 44px);}
+
+  /* 顶栏：黄铜包边军牌 */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:linear-gradient(180deg,#262C1C,#1B2013);
+    border:1px solid var(--brass-lo);border-radius:4px;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),inset 0 1px 0 rgba(228,200,126,.16),var(--sh-card);
+    padding:9px 12px;margin-bottom:24px;position:relative;
   }
-  h1 { font-size: 42px; font-weight: 800; letter-spacing: 2px; }
-  h1 .g { color: var(--accent2); }
-  .sub { color: var(--dim); margin-top: 14px; font-size: 15px; line-height: 1.7; }
-  .grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 22px;
+  .topbar::before{content:"";position:absolute;left:8px;right:8px;top:2px;height:1px;
+    background:linear-gradient(90deg,transparent,rgba(228,200,126,.35),transparent)}
+  .brand{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;
+    letter-spacing:2.2px;color:var(--brass-hi);text-transform:uppercase}
+  .brand .star{width:20px;height:20px;flex:none;color:var(--brass);display:flex;align-items:center;justify-content:center}
+  .brand .star svg{width:100%;height:100%}
+  .brand small{display:block;font-size:8.5px;letter-spacing:3px;color:var(--muted);font-weight:600;margin-top:1px}
+  .gh-btn{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:3px;
+    font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--ink2);text-decoration:none;
+    background:rgba(196,162,92,.08);border:1px solid var(--brass-lo);
+    transition:transform .26s var(--ease-spring),color .18s,background .18s,border-color .18s}
+  .gh-btn svg{width:14px;height:14px;color:var(--brass)}
+  @media (hover:hover){
+    .gh-btn:hover{transform:translateY(-3px) scale(1.05);color:var(--brass-hi);background:rgba(196,162,92,.18);border-color:var(--brass)}
   }
-  .card {
-    background: linear-gradient(160deg, var(--panel), var(--panel2));
-    border: 1px solid rgba(255,255,255,.06);
-    border-radius: 18px;
-    padding: 26px 24px 22px;
-    display: flex; flex-direction: column; gap: 12px;
-    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
-    text-decoration: none; color: inherit; position: relative; overflow: hidden;
+  @media (hover:none){.gh-btn:active{filter:brightness(.85)}}
+
+  /* 大标题：战报式 */
+  .hero{padding:10px 2px 20px;border-bottom:1px solid var(--sep);margin-bottom:18px}
+  .kick{font-size:11px;font-weight:800;letter-spacing:3.5px;color:var(--brass);text-transform:uppercase;margin-bottom:6px}
+  h1{font-size:33px;font-weight:900;letter-spacing:.5px;line-height:1.15;color:var(--ink)}
+  h1 .am{color:var(--brass-hi);font-weight:900}
+  .sub{margin-top:9px;font-size:13px;color:var(--muted);line-height:1.75;letter-spacing:.3px}
+  .sub b{color:var(--ink2);font-weight:700}
+
+  /* 游戏卡片：羊皮纸军牌 */
+  .cards{display:flex;flex-direction:column;gap:14px}
+  .card{
+    display:flex;align-items:center;gap:15px;
+    background:
+      linear-gradient(180deg,rgba(255,255,255,.35),rgba(0,0,0,0) 30%),
+      var(--card);
+    border:1px solid var(--brass-lo);border-radius:6px;
+    padding:15px 16px 15px 14px;text-decoration:none;color:inherit;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.4),inset 0 0 0 2px rgba(138,111,53,.25),var(--sh-card);
+    position:relative;overflow:hidden;
+    transition:transform .22s var(--ease),box-shadow .22s var(--ease);
   }
-  .card::before {
-    content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    opacity: 0; transition: opacity .25s ease;
+  .card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;opacity:0;
+    background:linear-gradient(90deg,transparent,var(--brass),transparent);transition:opacity .22s}
+  .card .no{position:absolute;top:4px;right:9px;font-size:9px;font-weight:800;letter-spacing:1.5px;
+    color:rgba(90,66,33,.42)}
+  /* 识别章：双层铜环 + 军种色底 */
+  .card .art{width:60px;height:60px;flex:none;display:flex;align-items:center;justify-content:center;
+    position:relative;border-radius:50%;
+    box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brass-lo),inset 0 2px 6px rgba(0,0,0,.35);
+    background:var(--g1,#4C5C58);color:#F4E8C8}
+  .card .art svg{width:28px;height:28px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+  .card.fps{--g1:linear-gradient(150deg,#5A6B4A,#3D4A30)}
+  .card.still{--g1:linear-gradient(150deg,#4C5C58,#333F3B)}
+  .card.phy{--g1:linear-gradient(150deg,#6B5640,#4A3A28)}
+  .card .body{flex:1;min-width:0}
+  .card .t{font-size:16.5px;font-weight:800;letter-spacing:.4px;color:var(--card-ink);
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .card .tag{font-size:9.5px;font-weight:800;letter-spacing:1.6px;color:#E8D9AE;
+    background:linear-gradient(180deg,#4A5432,#39411F);padding:3px 8px 2px;border-radius:2px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 1px 2px rgba(0,0,0,.35);flex:none}
+  .card .d{margin-top:5px;font-size:12.5px;color:rgba(58,46,31,.72);line-height:1.55;letter-spacing:.2px}
+  .card .go{flex:none;width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(138,111,53,.55);color:#8A6F35;
+    transition:transform .26s var(--ease-spring),background .18s,color .18s,border-color .18s}
+  .card .go svg{width:15px;height:15px}
+  @media (hover:hover){
+    .card:hover{transform:translateY(-3px) scale(1.012);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),inset 0 0 0 2px rgba(196,162,92,.5),0 16px 34px rgba(0,0,0,.5)}
+    .card:hover::after{opacity:1}
+    .card:hover .go{background:linear-gradient(180deg,#C4A25C,#8A6F35);color:#FFF7E0;border-color:#C4A25C;transform:scale(1.08)}
   }
-  .card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(76,201,240,.35);
-    box-shadow: 0 14px 40px rgba(0,0,0,.45);
+  @media (hover:none){
+    .card:active{filter:brightness(.92)}
   }
-  .card:hover::before { opacity: 1; }
-  .ico { font-size: 38px; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
-  .t { font-size: 20px; font-weight: 700; }
-  .d { color: var(--dim); font-size: 13.5px; line-height: 1.65; flex: 1; }
-  .tag { align-self: flex-start; font-size: 11.5px; padding: 4px 10px; border-radius: 999px;
-    background: rgba(76,201,240,.12); color: var(--accent); border: 1px solid rgba(76,201,240,.25); }
-  .play {
-    margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--gold);
-    display: flex; align-items: center; gap: 6px;
-  }
-  footer { text-align: center; color: var(--dim); font-size: 13px; margin-top: 56px; }
-  footer a { color: var(--accent); text-decoration: none; }
+
+  footer{margin-top:30px;text-align:center;font-size:11.5px;color:var(--muted);letter-spacing:.5px;line-height:2}
+  footer a{color:var(--brass);text-decoration:none;border-bottom:1px solid rgba(196,162,92,.35)}
+  footer a:hover{color:var(--brass-hi)}
+
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-thumb{background:rgba(196,162,92,.35);border-radius:4px}
 </style>
 </head>
 <body>
+<div class="grain"></div>
 <div class="wrap">
-  <header>
-    <div class="logo">ndshuge · game hub</div>
-    <h1>鼠哥<span class="g">游戏厅</span></h1>
-    <p class="sub">自己做的游戏，朋友随便玩。有 Bug 骂鼠哥，玩得爽也骂鼠哥。<br>新游戏会不断上架，欢迎常来。</p>
+  <div class="topbar">
+    <div class="brand">
+      <span class="star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.9 6.26 6.6.6-5 4.4 1.5 6.5L12 16.9 5.9 19.8l1.5-6.5-5-4.4 6.6-.6z"/></svg></span>
+      <span>NDSHUGE<small>鼠哥游戏厅</small></span>
+    </div>
+    <a class="gh-btn" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
+      GITHUB
+    </a>
+  </div>
+
+  <header class="hero">
+    <div class="kick">NDSHUGE ARMORY · EST. 2026</div>
+    <h1>鼠哥<span class="am">军械库</span></h1>
+    <p class="sub">自家产的游戏，朋友随便取用。<br>打得好是鼠哥教得好，<b>打得烂</b>是鼠哥坑得妙。<b>新装备持续入库</b>。</p>
   </header>
 
-  <div class="grid" id="grid"></div>
+  <nav class="cards" id="cards"></nav>
 
   <footer>
-    <a href="https://github.com/ndshuge/ndshuge-game">GitHub 仓库</a> · 鼠哥制作 © 2026
+    <a href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB 仓库</a>
+    &nbsp;·&nbsp; NDSHUGE © 2026
   </footer>
 </div>
 
 <script>
-const games = [
-  {
-    ico: "🎯",
-    t: "CS:GO 沙漠练枪场",
-    d: "Dust2 经典地图靶场。多种模式的练枪挑战，跟手感极佳的 FPS 射击体验。",
-    tag: "FPS · 练枪",
-    href: "./games/csgo-dust2/"
-  },
-  {
-    ico: "🌌",
-    t: "重力花园",
-    d: "暮色花园里撒下刚体，看它们真实坠落碰撞堆叠；右键引爆掀飞一切，空格翻转重力。",
-    tag: "物理 · 解压",
-    href: "./games/gravity-garden/"
-  },
-  {
-    ico: "🏎️",
-    t: "地平线旷野",
-    d: "开放世界驾驶。旷野上自由驰骋，感受速度与地形的碰撞。",
-    tag: "驾驶 · 开放世界",
-    href: "./games/horizon-drift/"
-  }
+var IC = {
+  fps:'<circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/>',
+  phy:'<circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>',
+  still:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  chev:'<path d="m9 18 6-6-6-6"/>'
+};
+function svg(inner){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
+}
+var games = [
+  {no:'No.01', cls:'fps', t:'CS:GO 沙漠练枪场', tag:'FPS · 练枪', icon:'fps',
+   d:'Dust2 经典地图靶场，多模式练枪挑战，跟手感极佳的射击体验。', href:'./games/csgo-dust2/'},
+  {no:'No.02', cls:'still', t:'凝时 STILL', tag:'弹幕 · 时停', icon:'still',
+   d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。', href:'./games/still/'},
+  {no:'No.03', cls:'phy', t:'重力花园', tag:'物理 · 解压', icon:'phy',
+   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/'}
 ];
-
-const grid = document.getElementById("grid");
-games.forEach(g => {
-  const a = document.createElement("a");
-  a.className = "card";
-  a.href = g.href;
-  a.target = "_blank";
-  a.rel = "noopener";
-  a.innerHTML = `
-    <div class="ico">${g.ico}</div>
-    <div class="t">${g.t}</div>
-    <div class="tag">${g.tag}</div>
-    <div class="d">${g.d}</div>
-    <div class="play">▶ 开玩</div>`;
-  grid.appendChild(a);
+var cards = document.getElementById('cards');
+games.forEach(function(g){
+  var a = document.createElement('a');
+  a.className = 'card ' + g.cls;
+  a.href = g.href; a.target = '_blank'; a.rel = 'noopener';
+  a.innerHTML =
+    '<span class="no">'+g.no+'</span>'+
+    '<span class="art">'+svg(IC[g.icon])+'</span>'+
+    '<span class="body"><span class="t">'+g.t+'<span class="tag">'+g.tag+'</span></span>'+
+    '<span class="d">'+g.d+'</span></span>'+
+    '<span class="go">'+svg(IC.chev)+'</span>';
+  cards.appendChild(a);
 });
 </script>
 </body>
