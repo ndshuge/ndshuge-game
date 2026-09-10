@@ -29,8 +29,8 @@ var CFG = {
   playerR: 13,
   inkMax: 100, inkRunCost: 8, inkFallCost: 7, inkJumpCost: 5,
   inkRegen: 4, dropInk: 20, spikeDmg: 25, bugDmg: 15, bugStompGain: 5,
-  invuln: 1.1, windForce: 220,
-  inkGap: 5, inkLife: 7, windLifeMul: 0.32, inkFade: 0.72,
+  invuln: 1.1, windForce: 150,
+  inkGap: 5, inkLife: 7, windLifeMul: 1.0, inkFade: 0.72,
   inkSettle: 0.28, // 墨落定时间：踩不到自己正在画的墨，只能踩已画好的
   bugSpeed: 65, bugEatR: 85, bugEatDt: 0.75,
 };
@@ -80,13 +80,13 @@ var LEVELS = [
   },
   { // 其五
     name: '其五 · 御风', stamp: '御', w: 2800, spawn: [110, 500],
-    plats: [G(0, 600), P(980, 480, 130), P(1330, 500, 130), G(1560, 300), G(1900, 200), P(2300, 470, 130), G(2640, 160)],
-    tip: [[180, 468, '风起墨散 · 石可依'], [700, 280, '借风跃岛']],
-    drops: [[1040, 430], [1390, 450], [2360, 420]],
+    plats: [G(0, 600), P(1130, 470, 200), G(1520, 340), G(1900, 200), P(2250, 450, 190), G(2600, 200)],
+    tip: [[180, 468, '风会托住你 · 御风而行'], [700, 250, '风里跳得又高又远'], [820, 400, '空中按反方向可刹车']],
+    drops: [[1180, 350], [1620, 440], [2320, 340]],
     spikes: [],
-    winds: [[620, 200, 920, 400, 1], [2160, 160, 460, 440, 1]],
+    winds: [[620, 140, 920, 460, 1], [2120, 120, 500, 480, 1]],
     bugs: [],
-    goal: [2720, 540]
+    goal: [2700, 540]
   },
   { // 其六
     name: '其六 · 蠹蚀', stamp: '蠹', w: 2800, spawn: [110, 500],
@@ -100,8 +100,8 @@ var LEVELS = [
   },
   { // 其七
     name: '其七 · 险峰', stamp: '险', w: 3200, spawn: [110, 500],
-    plats: [G(0, 320), P(480, 440, 160), P(760, 330, 150), P(520, 215, 150), [900, 270, 340, 340], G(1450, 520), P(2180, 460, 120), G(2350, 850)],
-    tip: [[150, 468, '险峰在望']],
+    plats: [G(0, 320), P(480, 440, 160), P(760, 330, 150), P(520, 215, 150), [900, 270, 340, 340], G(1450, 520), P(2150, 450, 170), G(2340, 860)],
+    tip: [[150, 468, '险峰在望'], [2050, 380, '风里一跃而过']],
     drops: [[600, 380], [1150, 210], [2200, 330]],
     spikes: [[960, 270, 130]],
     winds: [[1980, 180, 360, 420, 1]],
@@ -109,9 +109,9 @@ var LEVELS = [
     goal: [3050, 540]
   },
   { // 其八
-    name: '其八 · 归章', stamp: '归', w: 2400, spawn: [110, 500], spawnInk: 100,
+    name: '其八 · 归章', stamp: '归', w: 2400, spawn: [110, 500], spawnInk: 100, lifeMul: 2.6,
     plats: [G(0, 360), G(2160, 240)],
-    tip: [[150, 468, '一苇以航'], [470, 408, '拾墨而行 · 心稳则桥稳']],
+    tip: [[150, 468, '一苇以航'], [400, 428, '终章之墨 · 久久不散'], [500, 408, '心稳则桥稳']],
     drops: [[560, 470], [820, 450], [1080, 450], [1340, 450], [1600, 450], [1860, 460]],
     spikes: [], winds: [], bugs: [],
     goal: [2280, 540]
@@ -341,6 +341,9 @@ function physics(dt) {
       p.vx += wd[4] * CFG.windForce * dt; inWind = true;
     }
   }
+  // 风会托住你：风区内重力减半、下坠钳速减半（滑翔感）
+  var gravNow = inWind ? CFG.grav * 0.5 : CFG.grav;
+  var vyCap = inWind ? 450 : 900;
   AudioSys.setWind(inWind ? 0.05 : 0);
 
   // 跳跃缓冲 & 土狼时间
@@ -359,8 +362,8 @@ function physics(dt) {
   var sub = 2, sdt = dt / sub;
   for (var s = 0; s < sub; s++) {
     var prevFoot = p.y + p.r;
-    p.vy += CFG.grav * sdt;
-    p.vy = Math.min(p.vy, 900);
+    p.vy += gravNow * sdt;
+    p.vy = Math.min(p.vy, vyCap);
     // X 轴
     p.x += p.vx * sdt;
     p.x = clamp(p.x, p.r, LV.w - p.r);
@@ -544,6 +547,7 @@ function updateDrops(dt) {
 // ---------------- 墨迹老化（死亡期间冻龄：落墨的时刻凝固） ----------------
 function updateInk(dt) {
   if (player.dead) return;
+  var lm = LV.lifeMul || 1;
   for (var i = pts.length - 1; i >= 0; i--) {
     var pt = pts[i];
     var mul = 1;
@@ -551,7 +555,7 @@ function updateInk(dt) {
       var wd = LV.winds[w];
       if (pt.x > wd[0] && pt.x < wd[0] + wd[2] && pt.y > wd[1] && pt.y < wd[1] + wd[3]) { mul = 1 / CFG.windLifeMul; break; }
     }
-    pt.age += dt * mul;
+    pt.age += dt * mul / lm;
     if (pt.age > CFG.inkLife) removePt(i);
   }
 }

@@ -15,6 +15,7 @@
 | 回声小径 | `games/echo-trail/` | 像素 · 回声 |
 | 鼓点乒乓 | `games/beat-paddle/` | 音游 · 街机 |
 | 慢光 LIGHTLAG | `games/lightlag/` | 太空 · 防御 |
+| VOCALON! 节拍革命 | `games/vocalon-chaos/` | 音游 · 原曲 |
 
 ## 怎么添加新游戏
 
