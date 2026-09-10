@@ -12,6 +12,9 @@
 | 凝时 STILL | `games/still/` | 弹幕 · 时停 |
 | 重力花园 | `games/gravity-garden/` | 物理解压 |
 | 墨途 | `games/motu/` | 水墨平台 |
+| 回声小径 | `games/echo-trail/` | 像素 · 回声 |
+| 鼓点乒乓 | `games/beat-paddle/` | 音游 · 街机 |
+| 慢光 LIGHTLAG | `games/lightlag/` | 太空 · 防御 |
 
 ## 怎么添加新游戏
 

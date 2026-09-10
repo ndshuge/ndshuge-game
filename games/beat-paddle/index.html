@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>鼓点乒乓 BEAT PADDLE</title>
+<style>
+  html,body{margin:0;height:100%;background:#0a0c12;overflow:hidden;touch-action:none}
+  body{display:flex;align-items:center;justify-content:center}
+  #wrap{position:relative;height:min(100vh,133.33vw);aspect-ratio:3/4}
+  canvas{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#0e1220}
+  #crt{position:absolute;inset:0;pointer-events:none;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,.15) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse at center, transparent 55%, rgba(2,2,12,.4) 100%)}
+  #vig{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 80px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="480" height="640"></canvas>
+  <div id="crt"></div>
+  <div id="vig"></div>
+</div>
+<script>
+'use strict';
+/* ============================================================
+   鼓点乒乓 BEAT PADDLE —— 为鼠哥做的像素街机
+   核心创意：球的往返时间 = 音乐节拍，卡拍回击就是在演奏鼓机。
+   音乐随 combo 分层生长，你打得越好，这首歌越完整。
+   手感层独立模块：FX（粒子/震屏/hitstop）+ SFX（三层合成）
+   ============================================================ */
+
+window.__ERRORS = [];
+window.onerror = function (msg, src, line) {
+  window.__ERRORS.push(String(msg) + ' @' + line);
+  return false;
+};
+
+// ---------- 小工具 ----------
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[(Math.random() * arr.length) | 0];
+const TAU = Math.PI * 2;
+
+// 音名 → 频率（如 'A4'）
+const NOTE_IDX = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+function freq(n) {
+  const m = /^([A-G]#?)(-?\d)$/.exec(n);
+  if (!m) return 440;
+  return 440 * Math.pow(2, (NOTE_IDX[m[1]] + (parseInt(m[2], 10) - 4) * 12 - 9) / 12);
+}
+
+// ---------- 世界常量（逻辑分辨率 480x640，CSS 放大） ----------
+const W = 480, H = 640;
+const TABLE = { x0: 44, x1: 436, y: 268, h: 34 };   // 球台
+const NET_X = W / 2;
+const AI_HIT_Y = 200;          // 对手击球高度
+const PL_HIT_Y = 492;          // 玩家击球带中心
+const HIT_ZONE = 60;           // 击球带半高（宽窗，重心在爽）
+const REACH = 58;              // 拍长（x 方向判定）
+const WIN_P = 5;               // 每局 5 分
+
+// 判定窗口（秒）——宽松取向：PERFECT 占半拍一半以上，晚按有漏球线缓冲兑底
+const JUDGE = { PERFECT: 0.14, GOOD: 0.30, WEAK: 0.42 };
+
+// ---------- 对手图鉴 ----------
+const FOES = [
+  {
+    id: 'slime', name: '果冻泡芙', title: '第一拍 · 热身局',
+    desc: '慢悠悠的果冻球，跟它找找节拍',
+    beats: [2.5], speed: 70, errBase: 0.10, bpm: 112, sprite: 'slime',
+    multi: 0, drift: 0, hide: 0,
+    taunt: '咕噜…（它好像有点委屈）', winLine: '嘭——（炸成了果冻）'
+  },
+  {
+    id: 'cyclone', name: '旋风怪·艾转', title: '第二拍 · 弧线局',
+    desc: '长弧旋球，瞄准圈开始荡，偶尔双球',
+    beats: [3], speed: 95, errBase: 0.085, bpm: 120, sprite: 'cyclone', arc: 64,
+    multi: 0.15, drift: 14, hide: 0,
+    taunt: '转呀转～你的球拍晕了吗？', winLine: '旋风散了，只剩风'
+  },
+  {
+    id: 'glitch', name: '变速魔王·错拍', title: '第三拍 · 反拍局',
+    desc: '只打半拍切分球；瞄准圈每四拍暗一拍——用耳朵数',
+    beats: [1.5], speed: 115, errBase: 0.075, bpm: 128, sprite: 'glitch', arc: 30,
+    multi: 0.25, drift: 22, hide: 4,
+    taunt: '梆——梆梆。听见了吗？反拍。', winLine: '他的节拍器断成了两半'
+  },
+  {
+    id: 'dj', name: '鼓王 DJ-8000', title: '终局 · 抢鼓战',
+    desc: '节拍乱数+圈每二拍暗一拍+连发多球，还会偷你的鼓',
+    beats: [1.5, 2, 2.5], speed: 135, errBase: 0.06, bpm: 140, sprite: 'dj', arc: 40,
+    multi: 0.35, multi3: 0.12, drift: 30, hide: 2, steal: true,
+    taunt: '把你的底鼓，加进我的 SET。', winLine: 'DJ 台冒烟了，全场为你打拍'
+  },
+];
+
+const TAUNTS_LOSE = [
+  '节拍断了…再跟它一次', '别看球，听拍子', '手别僵，拍子还在走',
+  '它偷了你的重音，抢回来', '呼吸，跟着底鼓呼吸',
+];
+
+
+/* ============================================================
+   音频引擎：全合成，零外部资源
+   - lookahead 调度器：16 分音符步进，4 小节循环（Am F C G）
+   - 分层 BGM：随 combo 生长（心跳→踩镲→军鼓+琶音→旋律）
+   - 鼓机槽：玩家的 PERFECT 击球按击球步位填入鼓点，成为主奏
+   - SFX：三层合成（body 噪声 / thump 低频 / crack 瞬态）
+   ============================================================ */
+const Audio2 = {
+  ctx: null, master: null, music: null, sfx: null, noiseBuf: null,
+  bpm: 112, step: 0, nextStepTime: 0,
+  drumSlots: new Array(16).fill(null),   // 玩家鼓机槽
+  combo: 0,                              // 音乐层跟随的 combo（游戏层同步写）
+  muted: false,
+
+  init() {
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC({ latencyHint: 'interactive' });
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.85;
+    this.master.connect(this.ctx.destination);
+    this.music = this.ctx.createGain();
+    this.music.gain.value = 0.5;
+    this.music.connect(this.master);
+    this.sfx = this.ctx.createGain();
+    this.sfx.gain.value = 0.95;
+    this.sfx.connect(this.master);
+    // 白噪声缓冲
+    const len = this.ctx.sampleRate * 1.2;
+    this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = this.noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.nextStepTime = this.ctx.currentTime + 0.06;
+  },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+  now() { return this.ctx ? this.ctx.currentTime : 0; },
+  beatDur() { return 60 / this.bpm; },
+  stepDur() { return this.beatDur() / 4; },
+  beatInfo() { // 供视觉：拍号与相位
+    if (!this.ctx) return { idx: 0, phase: 0 };
+    const b = this.beatDur(), t = this.now();
+    return { idx: Math.floor(t / b), phase: (t % b) / b };
+  },
+
+  // ---------- 基础合成件 ----------
+  tone(t, o) {
+    const c = this.ctx; if (!c) return;
+    const osc = c.createOscillator(), g = c.createGain();
+    osc.type = o.type || 'square';
+    osc.frequency.setValueAtTime(o.f0, t);
+    if (o.f1) osc.frequency.exponentialRampToValueAtTime(Math.max(20, o.f1), t + (o.dur || 0.15));
+    const v = (o.vol == null ? 0.3 : o.vol);
+    g.gain.setValueAtTime(v, t);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + (o.dur || 0.15));
+    osc.connect(g); g.connect(o.dest || this.sfx);
+    osc.start(t); osc.stop(t + (o.dur || 0.15) + 0.02);
+  },
+  noise(t, o) {
+    const c = this.ctx; if (!c) return;
+    const src = c.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = o.ftype || 'lowpass'; f.Q.value = o.q || 0.8;
+    f.frequency.setValueAtTime(o.f0 || 1700, t);
+    if (o.f1) f.frequency.exponentialRampToValueAtTime(Math.max(30, o.f1), t + o.dur);
+    const g = c.createGain();
+    const v = o.vol == null ? 0.3 : o.vol;
+    g.gain.setValueAtTime(v, t);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + o.dur);
+    src.connect(f); f.connect(g); g.connect(o.dest || this.sfx);
+    src.start(t); src.stop(t + o.dur + 0.02);
+  },
+
+  // ---------- 鼓组音色 ----------
+  kick(t, vol) { this.tone(t, { type: 'sine', f0: 150, f1: 40, dur: 0.13, vol: vol == null ? 0.95 : vol }); },
+  snare(t, vol) {
+    this.noise(t, { ftype: 'lowpass', f0: 2400, f1: 700, dur: 0.10, vol: (vol == null ? 0.5 : vol) * 0.8 });
+    this.tone(t, { type: 'triangle', f0: 210, f1: 150, dur: 0.06, vol: (vol == null ? 0.35 : vol) * 0.5 });
+  },
+  hat(t, vol) { this.noise(t, { ftype: 'highpass', f0: 6500, dur: 0.045, vol: vol == null ? 0.22 : vol }); },
+  clap(t, vol) {
+    const v = vol == null ? 0.45 : vol;
+    this.noise(t, { ftype: 'bandpass', f0: 1200, q: 1.6, dur: 0.05, vol: v });
+    this.noise(t + 0.011, { ftype: 'bandpass', f0: 1000, q: 1.6, dur: 0.09, vol: v * 0.85 });
+  },
+  drum(t, kind, vol) {
+    if (kind === 'kick') this.kick(t, vol);
+    else if (kind === 'snare') this.snare(t, vol);
+    else if (kind === 'hat') this.hat(t, vol);
+    else this.clap(t, vol);
+  },
+
+  // ---------- 和声素材：Am F C G，四小节 64 步 ----------
+  CH: [['A2', 'C3', 'E3'], ['F2', 'A2', 'C3'], ['C3', 'E3', 'G3'], ['G2', 'B2', 'D3']],
+  // 旋律（combo≥12）：每小节 16 步，null=休止，'-'=延音不触发
+  LEAD: [
+    ['E5', , 'C5', , 'D5', , 'E5', , 'G5', , 'E5', , 'D5', 'C5', , ],
+    ['A4', , 'C5', , 'D5', , 'C5', , 'A4', , 'G4', , 'A4', , , ],
+    ['E5', , 'G5', , 'A5', , 'G5', , 'E5', , 'D5', , 'C5', 'D5', , ],
+    ['E5', 'D5', 'C5', , 'A4', , 'C5', , 'A4', , 'G4', , 'A4', , , ],
+  ],
+
+  // ---------- 步进调度 ----------
+  pump() {
+    if (!this.ctx) return;
+    const ahead = this.ctx.currentTime + 0.14;
+    let guard = 0;
+    while (this.nextStepTime < ahead && guard++ < 32) {
+      this.scheduleStep(this.step, this.nextStepTime);
+      this.step = (this.step + 1) & 63;
+      this.nextStepTime += this.stepDur();
+    }
+  },
+  scheduleStep(step64, t) {
+    const bar = (step64 >> 4) & 3, s = step64 & 15;
+    const ch = this.CH[bar].map(freq);
+    const cm = this.combo;
+    const M = this.music;
+
+    // L0 心跳：底鼓 + 低音（永远在）
+    if (s === 0 || s === 8) this.kick(t, 0.62);
+    if (s === 0 || s === 8) this.tone(t, { type: 'square', f0: ch[0], dur: 0.30, vol: 0.16, dest: M });
+    if (s === 12) this.tone(t, { type: 'square', f0: ch[0] * 0.5, dur: 0.14, vol: 0.10, dest: M });
+
+    // L1 踩镲反拍（combo≥4）
+    if (cm >= 4 && (s === 2 || s === 6 || s === 10 || s === 14)) this.hat(t, 0.16);
+
+    // L2 军鼓 + 琶音（combo≥8）
+    if (cm >= 8 && (s === 4 || s === 12)) this.snare(t, 0.30);
+    if (cm >= 8 && (s & 1) === 0) {
+      const seq = [0, 1, 2, 1];
+      const nf = ch[seq[(s >> 1) & 3]] * 2;
+      this.tone(t, { type: 'triangle', f0: nf, dur: 0.09, vol: 0.075, dest: M });
+    }
+
+    // L3 旋律（combo≥12）
+    if (cm >= 12) {
+      const n = this.LEAD[bar][s];
+      if (n) this.tone(t, { type: 'square', f0: freq(n), dur: 0.17, vol: 0.085, dest: M });
+    }
+
+    // 玩家鼓机槽：主奏，音量大、更亮
+    const slot = this.drumSlots[s];
+    if (slot) this.drum(t, slot, 0.55);
+  },
+
+  // ---------- 玩家 PERFECT 填槽 ----------
+  SLOT_KINDS: ['kick', 'snare', 'hat', 'clap'],
+  fillSlot() {
+    const b = this.beatInfo();
+    const dur = this.beatDur();
+    const stepAt = Math.round((b.idx * 4 + b.phase * 4) % 16); // 当前 16 分步
+    const slot = this.drumSlots[stepAt];
+    if (slot) return; // 已有音，不覆盖（保留 groove）
+    const filled = this.drumSlots.filter(Boolean).length;
+    this.drumSlots[stepAt] = this.SLOT_KINDS[filled % 4];
+    // 填槽瞬间给个即时反馈音（调度音稍后到）
+    this.tone(this.now(), { type: 'triangle', f0: 1500, f1: 2200, dur: 0.07, vol: 0.2 });
+  },
+  stealSlot() { // DJ 抢鼓：随机抹掉一个
+    const idx = [];
+    for (let i = 0; i < 16; i++) if (this.drumSlots[i]) idx.push(i);
+    if (idx.length) this.drumSlots[pick(idx)] = null;
+  },
+  resetSlots() { this.drumSlots.fill(null); },
+
+  // ---------- SFX（四层：click 瞬态 / body / thump / crack，起音即炸） ----------
+  sHit(quality, pitchSt) { // 击球：事件驱动同步直发，无任何调度延迟；卡拍感由鼓机槽音承担
+    const t = this.now(), M = this.sfx;
+    const bright = quality === 'PERFECT' ? 1.35 : quality === 'GOOD' ? 1.0 : 0.7;
+    // click：5kHz 级锋利瞬态（8ms），击打乐的「啪」，起音快不快全看它
+    this.noise(t, { ftype: 'highpass', f0: 5200 * bright, dur: 0.012, vol: 0.4 });
+    this.noise(t, { f0: 1700 * bright, f1: 250, dur: 0.11, vol: 0.5, dest: M });           // body
+    this.tone(t, { type: 'sine', f0: 165 * bright, f1: 46, dur: 0.09, vol: 0.55, dest: M }); // thump
+    this.tone(t, { type: 'square', f0: 2600 * bright, f1: 1100 * bright, dur: 0.045, vol: 0.30, dest: M }); // crack
+    if (quality === 'PERFECT') { // 叮：随 combo 爬五声音阶
+      const f = 880 * Math.pow(2, (pitchSt || 0) / 12);
+      this.tone(t, { type: 'sine', f0: f * 2, dur: 0.30, vol: 0.16, dest: M });
+      this.tone(t, { type: 'sine', f0: f * 3, dur: 0.22, vol: 0.10, dest: M });
+      this.tone(t, { type: 'triangle', f0: f * 4, dur: 0.15, vol: 0.07, dest: M });
+    }
+  },
+  sWhiff() { // 挥空
+    const t = this.now();
+    this.noise(t, { ftype: 'bandpass', f0: 950, f1: 280, q: 2, dur: 0.13, vol: 0.28, dest: this.sfx });
+  },
+  sWeak() {
+    const t = this.now();
+    this.tone(t, { type: 'square', f0: 300, f1: 200, dur: 0.12, vol: 0.22, dest: this.sfx });
+  },
+  sMiss() { // 丢分：下行两音
+    const t = this.now();
+    this.tone(t, { type: 'square', f0: 262, dur: 0.12, vol: 0.24 });
+    this.tone(t + 0.13, { type: 'square', f0: 175, f1: 140, dur: 0.22, vol: 0.26 });
+  },
+  sScore() { // 得分：五声上扬琶音
+    const t = this.now(), ns = ['A4', 'C5', 'E5', 'A5'];
+    ns.forEach((n, i) => this.tone(t + i * 0.07, { type: 'triangle', f0: freq(n), dur: 0.14, vol: 0.22 }));
+  },
+  sThud() { // 对手失误的闷响
+    const t = this.now();
+    this.tone(t, { type: 'sine', f0: 95, f1: 48, dur: 0.16, vol: 0.5 });
+    this.noise(t, { f0: 500, f1: 120, dur: 0.12, vol: 0.3 });
+  },
+  sCrowd(hi) { // 观众欢呼（得分/PERFECT 连击）
+    const t = this.now();
+    this.noise(t, { ftype: 'bandpass', f0: hi ? 900 : 600, q: 0.5, dur: hi ? 0.9 : 0.5, vol: hi ? 0.16 : 0.09 });
+  },
+  sUI() { this.tone(this.now(), { type: 'square', f0: 660, dur: 0.06, vol: 0.15 }); },
+  sWin() { // 局胜：号角
+    const t = this.now(), ns = ['C5', 'E5', 'G5', 'C6', 'E6'];
+    ns.forEach((n, i) => this.tone(t + i * 0.09, { type: 'square', f0: freq(n), dur: 0.2, vol: 0.18 }));
+  },
+  sLose() {
+    const t = this.now(), ns = ['E4', 'C4', 'A3', 'F3'];
+    ns.forEach((n, i) => this.tone(t + i * 0.14, { type: 'square', f0: freq(n), dur: 0.22, vol: 0.2 }));
+  },
+  sCount(last) { // 发球倒数
+    this.tone(this.now(), { type: 'square', f0: last ? 990 : 740, dur: last ? 0.12 : 0.07, vol: 0.18 });
+  },
+};
+
+
+/* ============================================================
+   手感层 FX：粒子 / 震屏 / hitstop / 闪白 / 弹字
+   独立模块，与玩法解耦；hitstop 冻结画面但音乐继续走
+   （音乐不等人——失误掉拍的感觉由它强化）
+   ============================================================ */
+const FX = {
+  parts: [], pops: [], rings: [],
+  shake: 0, flash: 0, hitstop: 0, freezeT: 0,
+
+  burst(x, y, color, n, pow) {
+    n = n || 12; pow = pow || 1;
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU), sp = rand(60, 260) * pow;
+      this.parts.push({
+        x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60 * pow,
+        life: rand(0.22, 0.5), t: 0, color, size: rand(2, 4.5),
+      });
+    }
+  },
+  ring(x, y, color, maxR, dur) {
+    this.rings.push({ x, y, color, maxR: maxR || 60, dur: dur || 0.3, t: 0 });
+  },
+  pop(x, y, text, color, big) {
+    this.pops.push({ x, y, text, color, big: !!big, t: 0, dur: big ? 0.9 : 0.6 });
+  },
+  kick(shakeAmt, stopT, flashAmt) {
+    this.shake = Math.max(this.shake, shakeAmt);
+    if (stopT) this.hitstop = Math.max(this.hitstop, stopT);
+    if (flashAmt) this.flash = Math.max(this.flash, flashAmt);
+  },
+
+  update(dtRaw) {
+    // hitstop 只冻结游戏世界，粒子照跑（视觉惯性）
+    if (this.hitstop > 0) this.hitstop -= dtRaw;
+    const dt = dtRaw;
+    this.shake *= Math.exp(-dt * 7.5);
+    this.flash = Math.max(0, this.flash - dt * 3.2);
+    for (let i = this.parts.length - 1; i >= 0; i--) {
+      const p = this.parts[i];
+      p.t += dt;
+      if (p.t >= p.life) { this.parts.splice(i, 1); continue; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += 620 * dt; p.vx *= Math.exp(-dt * 2.4);
+    }
+    for (let i = this.pops.length - 1; i >= 0; i--) {
+      const p = this.pops[i]; p.t += dt;
+      if (p.t >= p.dur) this.pops.splice(i, 1);
+    }
+    for (let i = this.rings.length - 1; i >= 0; i--) {
+      const r = this.rings[i]; r.t += dt;
+      if (r.t >= r.dur) this.rings.splice(i, 1);
+    }
+  },
+
+  draw(ctx) {
+    // 粒子（像素方块）
+    for (const p of this.parts) {
+      const a = 1 - p.t / p.life;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      const s = Math.max(1, Math.round(p.size * a));
+      ctx.fillRect(Math.round(p.x - s / 2), Math.round(p.y - s / 2), s, s);
+    }
+    ctx.globalAlpha = 1;
+    // 冲击环
+    for (const r of this.rings) {
+      const p = r.t / r.dur;
+      ctx.globalAlpha = (1 - p) * 0.9;
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = 3 - p * 2;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, 4 + r.maxR * p, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    // 弹字
+    for (const p of this.pops) {
+      const pr = p.t / p.dur;
+      const a = pr < 0.15 ? pr / 0.15 : 1 - Math.max(0, (pr - 0.5) / 0.5);
+      const rise = pr * 34;
+      ctx.globalAlpha = clamp(a, 0, 1);
+      ctx.font = (p.big ? 'bold 34px' : 'bold 20px') + ' "Microsoft YaHei", monospace';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(10,12,20,.9)';
+      const sx = p.x, sy = p.y - rise;
+      ctx.strokeText(p.text, sx, sy);
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, sx, sy);
+      ctx.globalAlpha = 1;
+    }
+  },
+};
+
+
+/* ============================================================
+   像素精灵：字符画 → 预渲染离屏画布
+   调色板统一，角色 2 帧动画；拍子与球程序绘制
+   ============================================================ */
+const PAL = {
+  '.': null,
+  r: '#e8434d', R: '#a02030',             // 红头巾/拍面
+  f: '#ffd9b0', k: '#20242e',             // 皮肤/描边黑
+  w: '#f2f4f8', W: '#c2c8dd',             // 白衣/灰
+  m: '#7a4a2b',                           // 深棕
+  g: '#5be36a', G: '#2f9e4f',             // 果冻绿
+  p: '#8f7bff', P: '#4b3fa8',             // 旋风紫
+  b: '#3ec8ff',                           // 冰蓝
+  y: '#ffd23f', Y: '#c79a1e',             // 金
+  o: '#ff8c42',                           // 橙
+  n: '#ff4d6d', N: '#8f1f30',             // 魔王红
+  s: '#3a4152', S: '#2a2f3d',             // 深灰蓝
+  c: '#9aa4bf',                           // 金属灰
+  t: '#ff9fb2',                           // 粉
+  e: '#ffffff',                           // 纯白
+  d: '#141821',                           // 暗底
+};
+
+function makeSprite(rows, flip) {
+  const h = rows.length, w = rows[0].length;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const c = cv.getContext('2d');
+  for (let y = 0; y < h; y++) {
+    const row = rows[y];
+    for (let x = 0; x < w; x++) {
+      const col = PAL[row[flip ? w - 1 - x : x]];
+      if (col) { c.fillStyle = col; c.fillRect(x, y, 1, 1); }
+    }
+  }
+  return cv;
+}
+
+// ---------- 玩家「红头巾小子」16x18，两帧腿 ----------
+const P_BODY_A = [
+  '................',
+  '.....rrrrrr.....',
+  '....rrrrrrrr....',
+  '...rrrrrrrrrr...',
+  '...rffffffffr...',
+  '...rfkffffkfr...',
+  '...rffffffffr...',
+  '....ffmffmff....',
+  '.....ffffff.....',
+  '......mmmm......',
+  '....wwwwwwww....',
+  '...wwwwwwwwww...',
+  '...w.wwwwww.w...',
+  '...s.wwwwww.....',
+  '.....wwwwww.....',
+  '.....dd..dd.....',
+  '....ddd..ddd....',
+  '...dd......dd...',
+];
+const P_BODY_B = [
+  '................',
+  '.....rrrrrr.....',
+  '....rrrrrrrr....',
+  '...rrrrrrrrrr...',
+  '...rffffffffr...',
+  '...rfkffffkfr...',
+  '...rffffffffr...',
+  '....ffmffmff....',
+  '.....ffffff.....',
+  '......mmmm......',
+  '....wwwwwwww....',
+  '...wwwwwwwwww...',
+  '...w.wwwwww.w...',
+  '...s.wwwwww.....',
+  '.....wwwwww.....',
+  '....dd....dd....',
+  '...ddd....ddd...',
+  '..dd........dd..',
+];
+
+// ---------- 果冻泡芙 18x13，两帧 ----------
+const SLIME_A = [
+  '......gggggg......',
+  '....gggggggggg....',
+  '...gggggggggggg...',
+  '..gggeekgggkeegg..',
+  '..ggeekkgggkkeegg.',
+  '.gggggggggggggggg.',
+  'gggggGGggggGGggggg',
+  'gggggggggggggggggg',
+  'gGgggggggggggggGgg',
+  'gGGgggggggggggGGgg',
+  '.GGGGGGGGGGGGGGGG.',
+  '..GGGGGGGGGGGGGG..',
+  '....GGGGGGGGGG....',
+];
+const SLIME_B = [
+  '..................',
+  '..................',
+  '......gggggg......',
+  '....gggggggggg....',
+  '..ggggeekggkeegg..',
+  '.ggggeekkggkkeegg.',
+  'gggggggggggggggggg',
+  'ggggggGGggggGGgggg',
+  'gGgggggggggggggGgg',
+  'gGGGggggggggggGGGg',
+  '.GGGGGGGGGGGGGGGG.',
+  'GGGGGGGGGGGGGGGGGG',
+  'GGGGGGGGGGGGGGGGGG',
+];
+
+// ---------- 旋风怪 18x20，两帧 ----------
+const CYC_A = [
+  '........ee........',
+  '.......peep.......',
+  '......ppppp.......',
+  '.....ppPePpp......',
+  '....ppppPpppp.....',
+  '...sppppppppps....',
+  '....sppppppps.....',
+  '...pppppppppp.....',
+  '..pppppppppppp....',
+  '.sppppppppppps....',
+  '..pppppppppp......',
+  '...sppppppps......',
+  '....pppppppp......',
+  '...pppppppppp.....',
+  '....spppppps......',
+  '.....pppppp.......',
+  '......pppp........',
+  '.....ssss.........',
+  '....ss..ss........',
+  '...ss....ss.......',
+];
+const CYC_B = [
+  '........ee........',
+  '.......peep.......',
+  '......ppppp.......',
+  '.....ppPePpp......',
+  '....ppppPpppp.....',
+  '...sppppppppps....',
+  '....sppppppps.....',
+  '...pppppppppp.....',
+  '..pppppppppppp....',
+  '.sppppppppppps....',
+  '..pppppppppp......',
+  '...sppppppps......',
+  '....pppppppp......',
+  '...pppppppppp.....',
+  '....spppppps......',
+  '.....pppppp.......',
+  '......pppp........',
+  '....ssssss........',
+  '...ss....ss.......',
+  '..ss......ss......',
+];
+
+// ---------- 变速魔王 16x18，两帧（扫描线错位） ----------
+const GLI_A = [
+  '....nnnnnnnn....',
+  '...nnnnnnnnnn...',
+  '..nnkknnnnkknn..',
+  '..nkeeknnkeekn..',
+  '..nnkknnnnkknn..',
+  '..nnnnnddnnnnn..',
+  '..nnnnnnnnnnnn..',
+  '...nnnnnnnnnn...',
+  '..nn.nnnnnn.nn..',
+  '..Nn.nnnnnn.nN..',
+  '..Nn.nnnnnn.nN..',
+  '.....nnnnnn.....',
+  '....nn.nn.nn....',
+  '....n..nn..n....',
+  '....n..nn..n....',
+  '...nn..nn..nn...',
+  '...n...nn...n...',
+  '...nn......nn...',
+];
+const GLI_B = [
+  '................',
+  '...nnnnnnnn.....',
+  '..nnnnnnnnnn.n..',
+  '..nnkknnnnkknn..',
+  '.nnkeeknnkeeknn.',
+  '..nnkknnnnkknn..',
+  '..nnnnnddnnnnn..',
+  '..nnnnnnnnnnnn..',
+  '...nnnnnnnnnn.n.',
+  '..nn.nnnnnn.nn..',
+  '.nNn.nnnnnn.nN..',
+  '.....nnnnnn.....',
+  '....nn.nn.nn....',
+  '....n..nn..n....',
+  '...nn..nn..n....',
+  '...n...nn..nn...',
+  '...nn..nn...n...',
+  '....nn.....nn...',
+];
+
+// ---------- 鼓王 DJ-8000 18x20，两帧 ----------
+const DJ_A = [
+  '....yyyyyyyyyy....',
+  '...yyyyyyyyyyyy...',
+  '...ykkkkkkkkkky...',
+  '...ykwekkkkweky...',
+  '...ykkkkkkkkkky...',
+  '...yyyknnkkyyyy...',
+  '....yyyyyyyyyy....',
+  '......cccccc......',
+  '....yyyyyyyyyy....',
+  '...yyyYYYYYYyyy...',
+  '..syyyYYYYYYyys...',
+  '..sy.yyYYYYyy.ys..',
+  '....yyyyyyyyyy....',
+  '....yy.yyyy.yy....',
+  '....yy.yyyy.yy....',
+  '....cc.cc..cc.c...',
+  '....cc.cc..cc.c...',
+  '...ccc.cc..ccc....',
+  '...cc..cc..cc.....',
+  '..................',
+];
+const DJ_B = [
+  '....yyyyyyyyyy....',
+  '...yyyyyyyyyyyy...',
+  '...ykkkkkkkkkky...',
+  '...ykwekkkkweky...',
+  '...ykkkkkkkkkky...',
+  '...yyyknnkkyyyy...',
+  '....yyyyyyyyyy....',
+  '......cccccc......',
+  '....yyyyyyyyyy....',
+  '...yyyYYYYYYyyy...',
+  '..syyyYYYYYYyys...',
+  '..sy.yyYYYYyy.ys..',
+  '....yyyyyyyyyy....',
+  '....yy.yyyy.yy....',
+  '....yy.yyyy.yy....',
+  '...cc..cc..cc.....',
+  '...cc..cc..cc.....',
+  '..cc...cc..cc.....',
+  '..c....cc...c.....',
+  '..................',
+];
+
+const SPR = {};
+function buildSprites() {
+  SPR.playerA = makeSprite(P_BODY_A);
+  SPR.playerB = makeSprite(P_BODY_B);
+  SPR.slime = [makeSprite(SLIME_A), makeSprite(SLIME_B)];
+  SPR.cyclone = [makeSprite(CYC_A), makeSprite(CYC_B)];
+  SPR.glitch = [makeSprite(GLI_A), makeSprite(GLI_B)];
+  SPR.dj = [makeSprite(DJ_A), makeSprite(DJ_B)];
+  SPR.slimeF = [makeSprite(SLIME_A, true), makeSprite(SLIME_B, true)];
+  SPR.cycloneF = [makeSprite(CYC_A, true), makeSprite(CYC_B, true)];
+  SPR.glitchF = [makeSprite(GLI_A, true), makeSprite(GLI_B, true)];
+  SPR.djF = [makeSprite(DJ_A, true), makeSprite(DJ_B, true)];
+}
+
+// 拍子（程序绘制，可旋转）：红面 + 黑边 + 柄
+function drawPaddle(ctx, x, y, ang, scale) {
+  scale = scale || 2;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  ctx.rotate(ang);
+  ctx.scale(scale, scale);
+  // 柄
+  ctx.fillStyle = '#7a4a2b';
+  ctx.fillRect(-1.5, 0, 3, 9);
+  ctx.fillStyle = '#5c351d';
+  ctx.fillRect(-1.5, 7, 3, 2);
+  // 拍面
+  ctx.fillStyle = '#20242e';
+  ctx.beginPath(); ctx.arc(0, 0, 5.4, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#e8434d';
+  ctx.beginPath(); ctx.arc(0, -0.4, 4.4, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ff7b84';
+  ctx.fillRect(-2, -3, 1.6, 1.6);
+  ctx.restore();
+}
+
+
+/* ============================================================
+   玩法核心：球用 progress 驱动（到达时刻 = 击出时刻 + 整数拍），
+   保证"球到拍上"与"音乐节拍"数学锁死。节拍永远向前。
+   多球：AI 回球概率连发 2~3 球（arrival 间隔 1 拍），玩家连打即鼓 fill。
+   ============================================================ */
+const Input = {
+  l: false, r: false,
+};
+
+const G = {
+  state: 'TITLE', ghost: true,
+  foeIdx: 0, foe: FOES[0],
+  scoreP: 0, scoreA: 0,
+  combo: 0, perfectChain: 0, maxCombo: 0,
+  stats: null,
+  balls: [],                       // 多球支持：同屏可有多颗飞行球
+  player: { x: W / 2, swing: 0, stun: 0, run: 0 },
+  ai: { x: W / 2, swing: 0, stun: 0, run: 0 },
+  serveSide: 'player',
+  serveAt: 0, lastCount: -1,
+  pointT: 0, endT: 0, endWin: false,
+  time: 0,
+};
+
+function resetStats() {
+  G.stats = { strokes: 0, perfects: 0, goods: 0, weaks: 0, t0: performance.now() };
+  G.maxCombo = 0;
+}
+
+// ---------- 球 ----------
+function launchBall(from, o) {
+  const beats = o.beats;
+  const dur = beats * Audio2.beatDur();
+  const n = Audio2.now();
+  const b = {
+    from, beats,
+    x0: o.x0, tx: o.tx,
+    y0: from === 'ai' ? AI_HIT_Y : PL_HIT_Y,
+    y1: from === 'ai' ? PL_HIT_Y : AI_HIT_Y,
+    t0: n, dur, arrival: n + dur,
+    arc: o.arc || 0, dir: o.dir || 1,
+    state: 'fly', trail: [],
+    aiPlan: null, deadT: 0, dx: 0, dy: 0, vx: 0, vy: 0,
+    drift: o.drift || 0,        // 瞄准圈漂移幅度（px）
+    hide: o.hide || 0,          // 瞄准圈每 N 拍暗一拍（0=不隐）
+    playerDone: false,
+  };
+  G.balls.push(b);
+  // AI 预判 + 失误 roll（球一出手命运已定，跑位只是演出）
+  if (from === 'player') {
+    const reach = Math.abs(b.tx - G.ai.x);
+    const q = o.quality || 'GOOD';
+    let missP = G.foe.errBase + G.perfectChain * 0.045 + clamp(reach / 420, 0, 0.40);
+    if (q === 'PERFECT') missP += 0.06;
+    missP = clamp(missP, 0, 0.62);
+    b.aiPlan = { miss: Math.random() < missP, react: rand(0.10, 0.16) };
+    if (b.aiPlan.miss && Math.random() < 0.5) b.aiPlan.miss = false;
+  }
+  return b;
+}
+
+function ballPos(b) {
+  if (b.state !== 'fly') return { x: b.dx, y: b.dy, p: 1 };
+  const p = clamp((Audio2.now() - b.t0) / b.dur, 0, 1.2);
+  const x = lerp(b.x0, b.tx, p) + Math.sin(clamp(p, 0, 1) * Math.PI) * b.arc * b.dir;
+  const y = lerp(b.y0, b.y1, p);
+  return { x, y, p };
+}
+
+// AI 发球 / 回球落点：打向玩家半场，高等级专打远处
+function aiTargetForPlayer() {
+  const lv = G.foeIdx;
+  const px = G.player.x;
+  let tx;
+  if (lv === 0) tx = rand(90, 390);
+  else if (lv === 1) tx = rand(70, 410);
+  else if (lv === 2) tx = px < W / 2 ? rand(280, 410) : rand(70, 200);
+  else tx = px < W / 2 ? rand(330, 415) : rand(65, 150);
+  return tx;
+}
+
+// ---------- 发球 ----------
+function beginServe(side) {
+  G.serveSide = side;
+  G.state = 'SERVE';
+  const b = Audio2.beatDur();
+  G.serveAt = (Math.floor(Audio2.now() / b) + 5) * b;
+  G.lastCount = -1;
+  G.balls = [];
+}
+
+function doServe() {
+  const side = G.serveSide;
+  const foeBeats = G.ghost ? pick([2, 2.5]) : pick(G.foe.beats);
+  const arc = G.ghost ? 36 : (G.foe.arc || 18);
+  if (side === 'player') {
+    const tx = G.ghost ? rand(100, 380) : rand(110, 370);
+    launchBall('player', { x0: G.player.x, tx, beats: foeBeats, arc: 22, dir: Math.random() < 0.5 ? 1 : -1, quality: 'GOOD' });
+  } else {
+    const tx = G.ghost ? rand(100, 380) : aiTargetForPlayer();
+    const nb = launchBall('ai', {
+      x0: G.ai.x, tx, beats: foeBeats, arc,
+      dir: Math.random() < 0.5 ? 1 : -1,
+      drift: G.ghost ? 0 : G.foe.drift, hide: G.ghost ? 0 : G.foe.hide,
+    });
+    nb.aiPlan = { miss: G.ghost && Math.random() < 0.02, react: 0.1 };
+  }
+  G.state = 'RALLY';
+  const sw = side === 'player' ? G.player : G.ai;
+  sw.swing = 0.16;
+}
+
+// ---------- 多球连发（AI 回球侧） ----------
+function maybeMultiBall(baseArrival, baseTx, baseBeats) {
+  if (G.ghost) return;
+  const foe = G.foe;
+  if (!foe.multi) return;
+  let extra = Math.random() < foe.multi ? 1 : 0;
+  if (extra && foe.multi3 && Math.random() < foe.multi3) extra = 2;
+  if (!extra) return;
+  FX.pop(W / 2, 320, extra === 2 ? '三连球!!' : '多球!', '#8fd8ff', true);
+  Audio2.sUI();
+  for (let i = 1; i <= extra; i++) {
+    // 节拍锁定：第 i 颗球到达 = 基准球到达后 i 拍（三球咚·咚·咚，玩家连打即鼓 fill）
+    const beats = baseBeats + i;
+    const tx = clamp(baseTx + (i % 2 ? 1 : -1) * rand(120, 190), 70, 410);
+    launchBall('ai', {
+      x0: G.ai.x + rand(-20, 20), tx, beats,
+      arc: (foe.arc || 18) * rand(0.7, 1.2),
+      dir: Math.random() < 0.5 ? 1 : -1,
+      drift: foe.drift, hide: foe.hide,
+    });
+  }
+}
+
+// ---------- 玩家击球 ----------
+function trySwing() {
+  if (G.ghost) return;
+  if (G.state === 'TITLE' || G.state === 'INTRO' || G.state === 'MATCH_END' || G.state === 'CLEAR') return;
+  const pl = G.player;
+  if (pl.stun > 0) return; // 0.09s 挥拍冷却：防狂按但不吞真击球
+  const inServe = G.state === 'SERVE';
+  // 多球目标选择：飞向玩家且在击球带内、离带心最近的那颗
+  let b = null, best = 1e9;
+  for (const x of G.balls) {
+    if (x.state !== 'fly' || x.from !== 'ai') continue;
+    const dy = Math.abs(ballPos(x).y - PL_HIT_Y);
+    if (dy <= HIT_ZONE + 6 && dy < best) { best = dy; b = x; }
+  }
+  if (!b) {
+    pl.swing = 0.18; pl.stun = inServe ? 0.05 : 0.09;
+    Audio2.sWhiff();
+    FX.burst(pl.x + (pl.x < W / 2 ? 26 : -26), PL_HIT_Y - 14, '#6b7288', 5, 0.5);
+    return;
+  }
+  const pos = ballPos(b);
+  if (Math.abs(pos.x - pl.x) > REACH) {
+    pl.swing = 0.18; pl.stun = 0.09;
+    Audio2.sWhiff();
+    FX.pop(pl.x, PL_HIT_Y - 60, '够不着!', '#9aa4bf');
+    return;
+  }
+  // ---- 判定 ----
+  const err = Audio2.now() - b.arrival;
+  const a = Math.abs(err);
+  let q;
+  if (a <= JUDGE.PERFECT) q = 'PERFECT';
+  else if (a <= JUDGE.GOOD) q = 'GOOD';
+  else if (a <= JUDGE.WEAK) q = 'WEAK';
+  else {
+    pl.swing = 0.18; pl.stun = 0.09;
+    Audio2.sWeak();
+    FX.pop(pos.x, PL_HIT_Y - 58, err < 0 ? '太早' : '太晚', '#9aa4bf');
+    return;
+  }
+  // ---- 击球成功：移除旧球，发出新球 ----
+  G.stats.strokes++;
+  pl.swing = 0.20;
+  const aimL = Input.l, aimR = Input.r;
+  let quality = q;
+  let tx, arc = 20, dir = Math.random() < 0.5 ? 1 : -1;
+
+  if (q === 'PERFECT') {
+    G.combo++; G.perfectChain++; G.stats.perfects++;
+    G.maxCombo = Math.max(G.maxCombo, G.combo);
+    const edge = aimL ? 0.06 : aimR ? 0.94 : pick([0.10, 0.90]);
+    tx = lerp(70, 410, edge);
+    arc = 34;
+    Audio2.fillSlot();
+    Audio2.sHit('PERFECT', Math.min(G.combo, 11) * 2);
+    FX.burst(pos.x, pos.y, '#ffd23f', 16, 1.3);
+    FX.burst(pos.x, pos.y, '#ffffff', 8, 0.8);
+    FX.ring(pos.x, pos.y, '#ffd23f', 58, 0.32);
+    FX.pop(pos.x, pos.y - 30, 'PERFECT!', '#ffd23f', true);
+    FX.kick(0.32, 0.05, 0.10);
+    if (G.combo > 0 && G.combo % 8 === 0) { Audio2.sCrowd(true); FX.pop(W / 2, 300, G.combo + ' COMBO!', '#ff8c42', true); }
+  } else if (q === 'GOOD') {
+    G.stats.goods++; G.perfectChain = 0;
+    tx = lerp(80, 400, aimL ? 0.25 : aimR ? 0.75 : rand(0.35, 0.65));
+    Audio2.sHit('GOOD', 0);
+    FX.burst(pos.x, pos.y, '#8fd8ff', 9, 0.9);
+    FX.pop(pos.x, pos.y - 26, 'GOOD', '#8fd8ff');
+    FX.kick(0.14, 0, 0);
+  } else {
+    G.stats.weaks++; G.perfectChain = 0;
+    G.combo = Math.max(0, G.combo - 2);
+    quality = 'WEAK';
+    tx = rand(150, 330);
+    Audio2.sHit('WEAK', 0); Audio2.sWeak();
+    FX.burst(pos.x, pos.y, '#6b7288', 6, 0.6);
+    FX.pop(pos.x, pos.y - 26, '没吃准…', '#9aa4bf');
+    FX.kick(0.10, 0, 0);
+  }
+  Audio2.combo = G.combo;
+  const idx = G.balls.indexOf(b);
+  if (idx >= 0) G.balls.splice(idx, 1);
+  const beats = q === 'WEAK' ? pick(G.foe.beats) + 0.5 : pick(G.foe.beats);
+  launchBall('player', { x0: pos.x, tx, beats, arc, dir, quality: q });
+}
+
+// ---------- AI / 幽灵到达 ----------
+function aiArrive(b) {
+  const plan = b.aiPlan || { miss: false, react: 0.1 };
+  G.ai.swing = 0.2;
+  if (plan.miss) {
+    const pos = ballPos(b);
+    b.state = 'dead';
+    b.dx = pos.x; b.dy = pos.y;
+    b.vx = rand(-160, 160); b.vy = rand(-220, -60);
+    b.deadT = 0;
+    Audio2.sThud();
+    FX.burst(pos.x, pos.y, '#ffffff', 10, 1);
+    FX.pop(pos.x, pos.y - 26, '呃!', '#ff8c42');
+    G.ai.stun = 0.5;
+    return;
+  }
+  // 稳稳回球
+  const tx = aiTargetForPlayer();
+  const beats = G.ghost ? pick([2, 2.5]) : pick(G.foe.beats);
+  const nb = launchBall('ai', {
+    x0: G.ai.x, tx, beats,
+    arc: G.ghost ? 34 : (G.foe.arc || 18),
+    dir: Math.random() < 0.5 ? 1 : -1,
+    drift: G.ghost ? 0 : G.foe.drift, hide: G.ghost ? 0 : G.foe.hide,
+  });
+  nb.aiPlan = { miss: G.ghost ? Math.random() < 0.02 : Math.random() < G.foe.errBase * 0.5, react: 0.1 };
+  // 多球连发（锚定这颗球的节拍，保证每拍一颗）
+  maybeMultiBall(nb.arrival, tx, beats);
+  if (!G.ghost && G.foe.steal && G.combo >= 4 && Math.random() < 0.33) {
+    Audio2.stealSlot();
+    FX.pop(W / 2, 330, 'DJ 抢走了一个鼓点!', '#ff4d6d', true);
+    Audio2.sWeak();
+  }
+  Audio2.sHit('GOOD', 0);
+  FX.burst(G.ai.x, AI_HIT_Y, '#c2c8dd', 6, 0.7);
+}
+
+// ---------- 判分 ----------
+function resolvePoint(winner) {
+  if (G.state !== 'RALLY') return; // 多球时防双计分：只有对拉中的判分有效
+  G.state = 'POINT';
+  G.pointT = 0;
+  if (winner === 'player') {
+    G.scoreP++;
+    Audio2.sScore(); Audio2.sCrowd(false);
+    FX.pop(W / 2, 240, '得分!', '#5be36a', true);
+    FX.kick(0.4, 0, 0.12);
+  } else {
+    G.scoreA++;
+    G.combo = 0; G.perfectChain = 0;
+    Audio2.combo = 0;
+    Audio2.sMiss();
+    FX.pop(W / 2, 240, '失分', '#ff4d6d', true);
+    FX.kick(0.5, 0, 0.18);
+  }
+  G.serveSide = winner === 'player' ? 'ai' : 'player';
+}
+
+// ---------- 状态切换 ----------
+function startMatch(foeIdx) {
+  G.ghost = false;
+  G.foeIdx = foeIdx;
+  G.foe = FOES[foeIdx];
+  G.scoreP = 0; G.scoreA = 0;
+  G.combo = 0; G.perfectChain = 0;
+  Audio2.combo = 0;
+  Audio2.bpm = G.foe.bpm;
+  Audio2.resetSlots();
+  resetStats();
+  G.ai.x = W / 2; G.player.x = W / 2;
+  G.balls = [];
+  G.state = 'INTRO';
+  Audio2.sUI();
+}
+function startRun() {
+  G.ghost = true;
+  G.foeIdx = 0; G.foe = FOES[0];
+  Audio2.bpm = 116; Audio2.resetSlots();
+  Audio2.combo = 0;
+  G.state = 'TITLE';
+  G.balls = [];
+}
+function nextAfterMatch() {
+  if (G.endWin) {
+    if (G.foeIdx >= FOES.length - 1) {
+      G.state = 'CLEAR';
+      Audio2.sWin();
+      Audio2.combo = 12;
+    } else startMatch(G.foeIdx + 1);
+  } else {
+    startMatch(G.foeIdx);
+  }
+}
+
+// ---------- 每帧更新（hitstop 时 dt=0，音乐照走） ----------
+function updateGame(dt) {
+  const n = Audio2.now();
+  G.time += dt;
+
+  // --- paddle ---
+  const pl = G.player, ai = G.ai;
+  pl.swing = Math.max(0, pl.swing - dt);
+  ai.swing = Math.max(0, ai.swing - dt);
+  pl.stun = Math.max(0, pl.stun - dt);
+  ai.stun = Math.max(0, ai.stun - dt);
+
+  if (G.ghost) {
+    // 幽灵玩家：追最靠近的第一颗来球，拍点准时击球
+    const incoming = G.balls.filter(x => x.state === 'fly' && x.from === 'ai' && !x.playerDone)
+      .sort((a, b2) => a.arrival - b2.arrival)[0];
+    if (incoming) {
+      const p = (n - incoming.t0) / incoming.dur;
+      G.player.x += clamp(incoming.tx - G.player.x, -300 * dt, 300 * dt);
+      G.player.run = 1;
+      if (p >= 1) {
+        incoming.playerDone = true;
+        if (Math.random() < 0.03) {
+          ghostMiss(incoming);
+        } else {
+          const pos = ballPos(incoming);
+          G.player.swing = 0.2;
+          G.combo = Math.min(G.combo + 1, 16);
+          Audio2.combo = G.combo;
+          if (Math.random() < 0.5) Audio2.fillSlot();
+          Audio2.sHit('PERFECT', Math.min(G.combo, 11) * 2);
+          FX.burst(pos.x, pos.y, '#ffd23f', 10, 1);
+          const idx = G.balls.indexOf(incoming);
+          if (idx >= 0) G.balls.splice(idx, 1);
+          launchBall('player', { x0: pos.x, tx: rand(110, 370), beats: pick([2, 2.5]), arc: 30, dir: Math.random() < 0.5 ? 1 : -1, quality: 'GOOD' });
+        }
+      }
+    } else G.player.run = 0;
+  } else {
+    let vx = 0;
+    if (Input.l) vx -= 1;
+    if (Input.r) vx += 1;
+    if (vx !== 0 && pl.stun <= 0) {
+      pl.x = clamp(pl.x + vx * 360 * dt, 36, W - 36);
+      pl.run = 1;
+    } else pl.run = 0;
+  }
+
+  // AI 追踪：第一颗玩家打来的球
+  let aiTarget = W / 2;
+  const incoming = G.balls.filter(x => x.state === 'fly' && x.from === 'player')
+    .sort((a, b2) => a.arrival - b2.arrival)[0];
+  if (incoming && n - incoming.t0 > (incoming.aiPlan ? incoming.aiPlan.react : 0.12)) aiTarget = incoming.tx;
+  const sp = G.ghost ? 150 : G.foe.speed;
+  const dx = clamp(aiTarget - ai.x, -sp * dt, sp * dt);
+  ai.x = clamp(ai.x + dx, 36, W - 36);
+  ai.run = Math.abs(dx) > 0.4 ? 1 : 0;
+
+  // --- 球循环 ---
+  for (const b of [...G.balls]) {
+    if (b.state === 'fly') {
+      b.trail.push(ballPos(b));
+      if (b.trail.length > 9) b.trail.shift();
+      const p = (n - b.t0) / b.dur;
+      if (p >= 1) {
+        if (b.from === 'ai') {
+          if (G.ghost) {
+            // ghost 击球在上面处理，这里兜底超时
+            if (!b.playerDone && p > 1.25) { b.playerDone = true; beginServe(pick(['player', 'ai'])); break; }
+          } else if (!b.playerDone && (p >= 1.15 || (n - b.t0) > b.dur * 1.35) && G.state === 'RALLY') {
+            // 漏球：晚按缓冲到 p=1.15，另有 age 兕底防任何卡态
+            b.playerDone = true;
+            b.state = 'dead';
+            const pos = ballPos(b);
+            b.dx = pos.x; b.dy = pos.y;
+            b.vx = rand(-60, 60); b.vy = 180;
+            b.deadT = 0;
+            FX.pop(pos.x, H - 90, '漏球!', '#ff4d6d');
+            resolvePoint('ai');
+            // 清场：其余飞行球全部转坠落（一球一判，判罚清晰）
+            for (const ob of G.balls) {
+              if (ob !== b && ob.state === 'fly') {
+                const op = ballPos(ob);
+                ob.state = 'dead'; ob.dx = op.x; ob.dy = op.y;
+                ob.vx = rand(-80, 80); ob.vy = rand(-40, 60); ob.deadT = 0.2;
+                ob.playerDone = true;
+              }
+            }
+            break;
+          }
+        } else {
+          // 到 AI 侧
+          const idx = G.balls.indexOf(b);
+          if (idx >= 0) G.balls.splice(idx, 1); // AI 接住（或呲掉后重生成）
+          aiArrive(b);
+          if (b.state === 'dead') G.balls.push(b); // 呲球留场做坠落动画
+        }
+      }
+    } else {
+      b.deadT += dt;
+      b.dx += b.vx * dt;
+      b.dy += b.vy * dt;
+      b.vy += 780 * dt;
+      if (G.ghost) {
+        if (b.deadT > 0.8) { beginServe(pick(['player', 'ai'])); break; }
+      } else if (b.deadT > 0.6 && G.state === 'RALLY') {
+        resolvePoint('player');
+        break;
+      }
+    }
+  }
+
+  // --- SERVE 倒数 ---
+  if (G.state === 'SERVE') {
+    const bd = Audio2.beatDur();
+    const remain = Math.ceil((G.serveAt - n) / bd);
+    if (remain !== G.lastCount && remain >= 1 && remain <= 4) {
+      G.lastCount = remain;
+      Audio2.sCount(remain === 1);
+    }
+    if (n >= G.serveAt) doServe();
+  }
+
+  // --- POINT 计时 ---
+  if (G.state === 'POINT') {
+    G.pointT += dt;
+    if (G.pointT > 1.5) {
+      if (G.scoreP >= WIN_P || G.scoreA >= WIN_P) {
+        G.endWin = G.scoreP >= WIN_P;
+        G.state = 'MATCH_END';
+        G.endT = 0;
+        if (G.endWin) Audio2.sWin(); else Audio2.sLose();
+      } else beginServe(G.serveSide);
+    }
+  }
+  if (G.state === 'MATCH_END') G.endT += dt;
+  if (G.state === 'INTRO') G.introT = (G.introT || 0) + dt;
+}
+
+function ghostMiss(b) { // 幽灵失误
+  const pos = ballPos(b);
+  b.state = 'dead';
+  b.dx = pos.x; b.dy = pos.y;
+  b.vx = rand(-120, 120); b.vy = rand(-160, -40);
+  b.deadT = 0;
+  Audio2.sThud();
+  G.combo = Math.max(0, G.combo - 4);
+  Audio2.combo = G.combo;
+}
+
+
+/* ============================================================
+   渲染：像素场馆 / 球台 / 角色 / 节拍视觉 / HUD / 状态覆盖
+   ============================================================ */
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+const SPR_SCALE = 2;
+
+// ---------- 背景 ----------
+function drawBG(c) {
+  const warm = clamp((Audio2.combo || 0) / 16, 0, 1);
+  // 墙：冷→暖
+  const wallTop = mixCol([22, 27, 42], [42, 26, 38], warm);
+  const wallBot = mixCol([34, 42, 66], [66, 38, 44], warm);
+  const grad = c.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, rgb(wallTop));
+  grad.addColorStop(0.62, rgb(wallBot));
+  grad.addColorStop(1, rgb(mixCol([18, 20, 30], [30, 20, 26], warm)));
+  c.fillStyle = grad; c.fillRect(0, 0, W, H);
+
+  // 射灯
+  c.globalAlpha = 0.06 + warm * 0.05;
+  c.fillStyle = '#ffe9a8';
+  for (let i = 0; i < 4; i++) {
+    const lx = 60 + i * 120 + Math.sin(G.time * 0.7 + i) * 8;
+    c.beginPath();
+    c.moveTo(lx - 6, 0); c.lineTo(lx + 6, 0);
+    c.lineTo(lx + 70, 210); c.lineTo(lx - 70, 210);
+    c.closePath(); c.fill();
+  }
+  c.globalAlpha = 1;
+
+  // 横幅
+  c.fillStyle = 'rgba(12,14,22,.55)';
+  c.fillRect(70, 52, 340, 30);
+  c.strokeStyle = 'rgba(255,210,63,.5)'; c.lineWidth = 2;
+  c.strokeRect(70, 52, 340, 30);
+  c.font = 'bold 17px "Microsoft YaHei", monospace';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillStyle = '#ffd23f';
+  c.fillText('★ BEAT PADDLE ★', W / 2, 68);
+
+  // 观众席（两排剪影，combo 高时跳动）
+  const beat = Audio2.beatInfo();
+  const jump = (Audio2.combo >= 8 ? 1 : 0.25) * (1 - beat.phase);
+  for (let row = 0; row < 2; row++) {
+    const y = 118 + row * 26;
+    for (let i = 0; i < 16; i++) {
+      const x = 14 + i * 30 + (row % 2) * 15;
+      const bob = Math.sin(G.time * 6 + i * 1.7 + row) * jump * 5;
+      const shade = row === 0 ? '#232838' : '#1b2030';
+      c.fillStyle = shade;
+      c.fillRect(x, y - 8 - bob, 10, 12);
+      c.fillStyle = mixCol([58, 66, 92], [120, 70, 80], warm * 0.6);
+      c.fillRect(x + 2, y - 12 - bob, 6, 6);
+    }
+  }
+  // 地板线
+  c.strokeStyle = 'rgba(255,255,255,.05)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const y = 430 + i * 36;
+    c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+  }
+}
+function rgb(a) { return `rgb(${a[0] | 0},${a[1] | 0},${a[2] | 0})`; }
+function mixCol(a, b, t) { return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]; }
+
+// ---------- 球台 ----------
+function drawTable(c) {
+  const t = TABLE;
+  // 腿
+  c.fillStyle = '#2a2f3d';
+  c.fillRect(t.x0 + 16, t.y + t.h, 10, 60);
+  c.fillRect(t.x1 - 26, t.y + t.h, 10, 60);
+  // 台面
+  c.fillStyle = '#173f36';
+  c.fillRect(t.x0, t.y, t.x1 - t.x0, t.h);
+  c.fillStyle = '#1f5c4a';
+  c.fillRect(t.x0, t.y, t.x1 - t.x0, t.h - 6);
+  // 白边线
+  c.fillStyle = '#dfe6f2';
+  c.fillRect(t.x0, t.y, t.x1 - t.x0, 3);
+  c.fillRect(t.x0, t.y + t.h - 3, t.x1 - t.x0, 3);
+  c.fillRect(t.x0, t.y, 3, t.h);
+  c.fillRect(t.x1 - 3, t.y, 3, t.h);
+  // 中线
+  c.fillStyle = 'rgba(255,255,255,.25)';
+  c.fillRect(W / 2 - 1, t.y + 4, 2, t.h - 8);
+  // 网
+  c.fillStyle = 'rgba(230,236,248,.85)';
+  c.fillRect(NET_X - 1, t.y - 24, 3, 24);
+  c.fillStyle = 'rgba(230,236,248,.3)';
+  for (let i = 0; i < 5; i++) c.fillRect(NET_X - 16 + i * 7, t.y - 22 + i * 4, 32, 1);
+  c.fillStyle = '#ff8c42';
+  c.fillRect(NET_X - 1, t.y - 27, 3, 3);
+}
+
+// 击球带提示
+function drawHitZone(c) {
+  const a = 0.10 + 0.06 * (1 - Audio2.beatInfo().phase);
+  c.fillStyle = `rgba(255,210,63,${a})`;
+  c.fillRect(60, PL_HIT_Y - HIT_ZONE, W - 120, HIT_ZONE * 2);
+  c.strokeStyle = 'rgba(255,210,63,.35)';
+  c.setLineDash([6, 6]);
+  c.strokeRect(60, PL_HIT_Y - HIT_ZONE, W - 120, HIT_ZONE * 2);
+  c.setLineDash([]);
+  c.font = '11px "Microsoft YaHei", monospace';
+  c.textAlign = 'left'; c.textBaseline = 'top';
+  c.fillStyle = 'rgba(255,210,63,.55)';
+  c.fillText('击球区', 64, PL_HIT_Y - HIT_ZONE + 4);
+}
+
+// ---------- 角色 ----------
+function drawPaddler(c, p, sprA, sprB, y, faceFlip) {
+  const img = p.run ? (Math.floor(G.time * 8) % 2 ? sprA : sprB) : sprA;
+  const sw = SPR_SCALE;
+  const w = img.width * sw, h = img.height * sw;
+  const px = Math.round(p.x - w / 2), py = Math.round(y - h + 6);
+  // 影子
+  c.fillStyle = 'rgba(0,0,0,.35)';
+  c.beginPath();
+  c.ellipse(p.x, y + 6, w * 0.38, 5, 0, 0, TAU);
+  c.fill();
+  c.drawImage(img, px, py, w, h);
+  // 拍子：随挥拍相位摆动
+  let ang = -0.55, ox = w * 0.42, oy = -h * 0.42;
+  if (p.swing > 0) {
+    const k = 1 - p.swing / 0.2;
+    ang = lerp(-1.5, 0.7, Math.min(1, k * 1.6));
+  }
+  if (faceFlip) { ox = -ox; ang = Math.PI - ang; }
+  drawPaddle(c, p.x + ox, y + oy, ang, SPR_SCALE);
+}
+
+function drawChars(c) {
+  // 对手（上方）
+  const foe = G.foe;
+  const frames = SPR[foe.sprite + (G.ghost ? '' : '')] || SPR[foe.sprite];
+  const flipFrames = SPR[foe.sprite + 'F'] || frames;
+  const fr = Math.floor(G.time * 3) % 2;
+  const img = (G.ai.x > W / 2 ? flipFrames : frames)[fr];
+  const sw = 2.2;
+  const w = img.width * sw, h = img.height * sw;
+  const y = AI_HIT_Y + 34;
+  c.fillStyle = 'rgba(0,0,0,.35)';
+  c.beginPath(); c.ellipse(G.ai.x, y + 6, w * 0.3, 5, 0, 0, TAU); c.fill();
+  c.drawImage(img, Math.round(G.ai.x - w / 2), Math.round(y - h + 6), w, h);
+  let ang = -0.5 + Math.sin(G.time * 2) * 0.08;
+  if (G.ai.swing > 0) ang = lerp(-1.4, 0.9, 1 - G.ai.swing / 0.2);
+  drawPaddle(c, G.ai.x + (G.ai.x > W / 2 ? -w * 0.4 : w * 0.4), y - h * 0.35, G.ai.x > W / 2 ? Math.PI - ang : ang, 2);
+
+  // 玩家（下方）
+  drawPaddler(c, G.player, SPR.playerA, SPR.playerB, PL_HIT_Y + 26, false);
+}
+
+// ---------- 球（多球循环 + 瞄准圈漂移/隐形） ----------
+function drawBall(c) {
+  const hue = (G.time * 300) % 360;
+  const isPerf = G.combo > 0;
+  const beatInfo = Audio2.beatInfo();
+  for (const b of G.balls) {
+    // 拖尾
+    for (let i = 0; i < b.trail.length; i++) {
+      const t = b.trail[i], a = (i + 1) / b.trail.length * 0.5;
+      c.globalAlpha = a;
+      c.fillStyle = isPerf ? `hsl(${(hue + i * 18) % 360},90%,65%)` : '#cfe6ff';
+      const s = 2 + i * 0.4;
+      c.fillRect(t.x - s / 2, t.y - s / 2, s, s);
+    }
+    c.globalAlpha = 1;
+    let bx, by;
+    if (b.state === 'fly') {
+      const pos = ballPos(b);
+      bx = pos.x; by = pos.y;
+      // 瞄准圈（节拍收缩圈）：漂移 + 整拍隐形
+      if (b.from === 'ai' && !G.ghost) {
+        const hideN = b.hide || 0;
+        const hidden = hideN > 0 && (beatInfo.idx % hideN) === (hideN - 1);
+        if (!hidden) {
+          const ph = beatInfo.phase;
+          const r = 8 + (1 - ph) * 30;
+          // 漂移：飞行途中荡，到达时刻 (1-p)→0 归零回球心，永不骗判定
+          let cdx = 0, cdy = 0;
+          if (b.drift) {
+            const w = TAU / Audio2.beatDur();
+            const env = 1 - clamp(pos.p, 0, 1);
+            cdx = Math.sin((Audio2.now() - b.t0) * w) * b.drift * env;
+            cdy = Math.cos((Audio2.now() - b.t0) * w * 0.7) * b.drift * 0.5 * env;
+          }
+          c.strokeStyle = `rgba(255,210,63,${0.25 + 0.45 * (1 - ph)})`;
+          c.lineWidth = 2;
+          c.beginPath(); c.arc(bx + cdx, by + cdy, r, 0, TAU); c.stroke();
+        }
+        // 玩家落点标记（永不离场：圈隐了它还在）
+        c.strokeStyle = 'rgba(255,255,255,.4)';
+        c.setLineDash([3, 4]);
+        c.beginPath(); c.arc(b.tx, PL_HIT_Y, 10, 0, TAU); c.stroke();
+        c.setLineDash([]);
+      }
+    } else {
+      bx = b.dx; by = b.dy;
+    }
+    // 球影
+    c.fillStyle = 'rgba(0,0,0,.3)';
+    const shY = by < TABLE.y ? TABLE.y + TABLE.h : PL_HIT_Y + 20;
+    c.beginPath(); c.ellipse(clamp(bx, 40, W - 40), shY, 5, 2.4, 0, 0, TAU); c.fill();
+    // 球体
+    c.fillStyle = '#20242e';
+    c.fillRect(bx - 4, by - 4, 8, 8);
+    c.fillStyle = isPerf ? `hsl(${hue},95%,70%)` : '#ffffff';
+    c.fillRect(bx - 3, by - 3, 6, 6);
+    c.fillStyle = '#ffffff';
+    c.fillRect(bx - 2, by - 2, 2, 2);
+  }
+}
+
+// ---------- HUD ----------
+function drawHUD(c) {
+  // 顶栏
+  c.fillStyle = 'rgba(10,12,20,.72)';
+  c.fillRect(0, 0, W, 44);
+  c.font = 'bold 15px "Microsoft YaHei", monospace';
+  c.textBaseline = 'middle';
+  // 对手分
+  c.textAlign = 'left';
+  c.fillStyle = G.foe.color;
+  c.fillText(G.ghost ? '幽灵对练' : G.foe.name, 14, 15);
+  c.font = 'bold 24px "Consolas", monospace';
+  c.fillStyle = '#ff4d6d';
+  c.fillText(String(G.ghost ? '-' : G.scoreA), 14, 32);
+  // 玩家分
+  c.textAlign = 'right';
+  c.font = 'bold 15px "Microsoft YaHei", monospace';
+  c.fillStyle = '#8fd8ff';
+  c.fillText('鼠哥', W - 14, 15);
+  c.font = 'bold 24px "Consolas", monospace';
+  c.fillStyle = '#5be36a';
+  c.fillText(String(G.ghost ? '-' : G.scoreP), W - 14, 32);
+  // 局数点
+  for (let i = 0; i < FOES.length; i++) {
+    c.fillStyle = i < G.foeIdx || (!G.ghost && i === G.foeIdx && G.scoreP >= WIN_P) ? '#ffd23f' : 'rgba(255,255,255,.18)';
+    c.fillRect(W / 2 - 28 + i * 16, 18, 10, 8);
+  }
+  // combo
+  if (G.combo >= 2 && !G.ghost) {
+    const beat = Audio2.beatInfo();
+    const s = 1 + (1 - beat.phase) * 0.12;
+    c.save();
+    c.translate(W / 2, 86);
+    c.scale(s, s);
+    c.font = 'bold 30px "Consolas", monospace';
+    c.textAlign = 'center';
+    c.lineWidth = 5; c.strokeStyle = 'rgba(10,12,20,.9)';
+    c.strokeText('×' + G.combo, 0, 0);
+    c.fillStyle = G.combo >= 12 ? '#ff8c42' : '#ffd23f';
+    c.fillText('×' + G.combo, 0, 0);
+    c.restore();
+  }
+}
+
+// 底部节拍条
+function drawBeatBar(c) {
+  const beat = Audio2.beatInfo();
+  const y = H - 26;
+  for (let i = 0; i < 4; i++) {
+    const x = W / 2 - 66 + i * 44;
+    const active = (beat.idx % 4) === i;
+    const ph = active ? beat.phase : 1;
+    c.strokeStyle = active ? '#ffd23f' : 'rgba(255,255,255,.25)';
+    c.lineWidth = 2;
+    c.beginPath(); c.arc(x, y, 11, 0, TAU); c.stroke();
+    c.fillStyle = active ? `rgba(255,210,63,${1 - ph})` : 'rgba(255,255,255,.08)';
+    c.beginPath(); c.arc(x, y, 11 * (1 - ph * 0.85), 0, TAU); c.fill();
+  }
+  // 鼓机槽指示
+  c.font = '10px "Consolas", monospace';
+  c.textAlign = 'right'; c.textBaseline = 'middle';
+  c.fillStyle = 'rgba(255,255,255,.5)';
+  c.fillText('DRUM', W - 96, y);
+  const filled = Audio2.drumSlots.filter(Boolean).length;
+  for (let i = 0; i < 16; i++) {
+    c.fillStyle = Audio2.drumSlots[i] ? '#ff8c42' : 'rgba(255,255,255,.14)';
+    c.fillRect(W - 88 + i * 5.4, y - 1, 4, 8);
+  }
+  c.fillStyle = 'rgba(255,255,255,.35)';
+  c.textAlign = 'left';
+  c.fillText(filled + '/16', W - 88, y - 12);
+}
+
+// ---------- 覆盖层 ----------
+function dim(c, a) { c.fillStyle = `rgba(8,10,16,${a})`; c.fillRect(0, 0, W, H); }
+
+function drawTitle(c) {
+  dim(c, 0.42);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  // LOGO
+  c.font = 'bold 62px "Microsoft YaHei", monospace';
+  c.lineWidth = 10; c.strokeStyle = '#141821';
+  c.strokeText('鼓点乒乓', W / 2, 210);
+  const beat = Audio2.beatInfo();
+  const bounce = (1 - beat.phase) * 5;
+  c.fillStyle = '#ffd23f';
+  c.fillText('鼓点乒乓', W / 2, 208 - bounce);
+  c.font = 'bold 20px "Consolas", monospace';
+  c.fillStyle = '#8fd8ff';
+  c.fillText('B E A T   P A D D L E', W / 2, 252);
+  c.font = '14px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.75)';
+  c.fillText('你的球拍，就是鼓槌', W / 2, 286);
+
+  c.font = '13px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.62)';
+  c.fillText('← → 跑位（按住方向击球=瞄准边线）', W / 2, 342);
+  c.fillText('空格 / J —— 卡在节拍上回击', W / 2, 364);
+  c.fillText('击中拍点 = PERFECT = 给鼓机填一个音', W / 2, 386);
+
+  const bl = Math.sin(G.time * 5) > -0.2;
+  if (bl) {
+    c.font = 'bold 17px "Microsoft YaHei", monospace';
+    c.fillStyle = '#5be36a';
+    c.fillText('按 回车 / 空格 开战', W / 2, 432);
+  }
+  c.font = '11px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.35)';
+  c.fillText('M 静音 · 连胜四场，成为节拍大师', W / 2, 462);
+}
+
+function drawIntro(c) {
+  dim(c, 0.5);
+  const foe = G.foe;
+  const frames = SPR[foe.sprite];
+  const img = frames[0];
+  const sw = 5, w = img.width * sw, h = img.height * sw;
+  const bob = Math.sin(G.time * 3) * 5;
+  c.imageSmoothingEnabled = false;
+  c.drawImage(img, W / 2 - w / 2, 140 - h / 2 + bob, w, h);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = '13px "Microsoft YaHei", monospace';
+  c.fillStyle = foe.color;
+  c.fillText(foe.title, W / 2, 238);
+  c.font = 'bold 34px "Microsoft YaHei", monospace';
+  c.lineWidth = 7; c.strokeStyle = '#141821';
+  c.strokeText(foe.name, W / 2, 274);
+  c.fillStyle = '#fff';
+  c.fillText(foe.name, W / 2, 274);
+  c.font = '14px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.8)';
+  c.fillText(foe.desc, W / 2, 312);
+  c.font = '12px "Consolas", monospace';
+  c.fillStyle = 'rgba(255,255,255,.5)';
+  c.fillText('BPM ' + foe.bpm + ' · 先得 ' + WIN_P + ' 分', W / 2, 338);
+  if (Math.sin(G.time * 5) > -0.2) {
+    c.font = 'bold 16px "Microsoft YaHei", monospace';
+    c.fillStyle = '#5be36a';
+    c.fillText('回车 · 开战', W / 2, 384);
+  }
+}
+
+function drawServe(c) {
+  const bd = Audio2.beatDur();
+  const remain = Math.max(1, Math.ceil((G.serveAt - Audio2.now()) / bd));
+  const ph = Audio2.beatInfo().phase;
+  const s = 1 + (1 - ph) * 0.35;
+  c.save();
+  c.translate(W / 2, H / 2 - 40);
+  c.scale(s, s);
+  c.font = 'bold 72px "Consolas", monospace';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = 8; c.strokeStyle = 'rgba(10,12,20,.85)';
+  c.strokeText(String(remain), 0, 0);
+  c.fillStyle = remain === 1 ? '#5be36a' : '#ffd23f';
+  c.fillText(String(remain), 0, 0);
+  c.restore();
+  c.font = '13px "Microsoft YaHei", monospace';
+  c.textAlign = 'center';
+  c.fillStyle = 'rgba(255,255,255,.65)';
+  c.fillText((G.serveSide === 'player' ? '鼠哥发球' : G.foe.name + ' 发球') + ' · 跟着数拍', W / 2, H / 2 + 34);
+}
+
+function drawMatchEnd(c) {
+  dim(c, 0.55);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  const win = G.endWin;
+  c.font = 'bold 44px "Microsoft YaHei", monospace';
+  c.lineWidth = 9; c.strokeStyle = '#141821';
+  c.strokeText(win ? '本局拿下!' : '局败', W / 2, 220);
+  c.fillStyle = win ? '#ffd23f' : '#ff4d6d';
+  c.fillText(win ? '本局拿下!' : '局败', W / 2, 220);
+  c.font = 'bold 30px "Consolas", monospace';
+  c.fillStyle = '#fff';
+  c.fillText(G.scoreP + ' : ' + G.scoreA, W / 2, 270);
+  c.font = '15px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.85)';
+  c.fillText(win ? G.foe.winLine : G.foe.taunt, W / 2, 312);
+  const pr = G.stats.strokes ? Math.round(G.stats.perfects / G.stats.strokes * 100) : 0;
+  c.font = '13px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.6)';
+  c.fillText(`PERFECT 率 ${pr}% · 最高连击 ×${G.maxCombo}`, W / 2, 348);
+  if (Math.sin(G.time * 5) > -0.2) {
+    c.font = 'bold 16px "Microsoft YaHei", monospace';
+    c.fillStyle = '#5be36a';
+    c.fillText('回车 · ' + (win ? (G.foeIdx >= FOES.length - 1 ? '结算' : '下一战') : '再战'), W / 2, 396);
+  }
+}
+
+function drawClear(c) {
+  dim(c, 0.6);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = 'bold 52px "Microsoft YaHei", monospace';
+  c.lineWidth = 10; c.strokeStyle = '#141821';
+  c.strokeText('节拍大师', W / 2, 170);
+  c.fillStyle = '#ffd23f';
+  c.fillText('节拍大师', W / 2, 170);
+  c.font = '16px "Microsoft YaHei", monospace';
+  c.fillStyle = 'rgba(255,255,255,.85)';
+  c.fillText('四战全胜 · 鼓机里全是你的重音', W / 2, 220);
+  const st = G.stats;
+  const secs = Math.round((performance.now() - st.t0) / 1000);
+  const pr = st.strokes ? Math.round(st.perfects / st.strokes * 100) : 0;
+  const title = pr >= 60 ? '评价：手指上长了个节拍器' : pr >= 40 ? '评价：律动球王' : '评价：鼓点学徒（前途无量）';
+  c.font = 'bold 18px "Consolas", monospace';
+  c.fillStyle = '#8fd8ff';
+  c.fillText(`PERFECT ${pr}%`, W / 2, 272);
+  c.fillText(`最高连击 ×${G.maxCombo}`, W / 2, 300);
+  c.fillText(`用时 ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`, W / 2, 328);
+  c.font = '15px "Microsoft YaHei", monospace';
+  c.fillStyle = '#ff8c42';
+  c.fillText(title, W / 2, 368);
+  if (Math.sin(G.time * 5) > -0.2) {
+    c.font = 'bold 16px "Microsoft YaHei", monospace';
+    c.fillStyle = '#5be36a';
+    c.fillText('回车 · 回到标题再来一轮', W / 2, 420);
+  }
+}
+
+// ---------- 总渲染 ----------
+function render() {
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  if (FX.shake > 0.01) {
+    ctx.translate(rand(-1, 1) * FX.shake * 9, rand(-1, 1) * FX.shake * 9);
+  }
+  drawBG(ctx);
+  drawTable(ctx);
+  drawHitZone(ctx);
+  drawBall(ctx);
+  drawChars(ctx);
+  FX.draw(ctx);
+  drawHUD(ctx);
+  drawBeatBar(ctx);
+
+  if (G.state === 'TITLE') drawTitle(ctx);
+  else if (G.state === 'INTRO') drawIntro(ctx);
+  else if (G.state === 'SERVE') drawServe(ctx);
+  else if (G.state === 'MATCH_END') drawMatchEnd(ctx);
+  else if (G.state === 'CLEAR') drawClear(ctx);
+  ctx.restore();
+
+  if (FX.flash > 0.01) {
+    ctx.fillStyle = `rgba(255,255,255,${FX.flash * 0.45})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+}
+
+
+/* ============================================================
+   启动：输入绑定 / 主循环 / 测试钩子
+   ============================================================ */
+
+function onFire() {
+  if (G.state === 'TITLE') { startMatch(0); return; }
+  if (G.state === 'RALLY' || G.state === 'SERVE') { trySwing(); return; }
+  if (G.state === 'INTRO') { beginServe('player'); G.introT = 0; return; }
+  if (G.state === 'MATCH_END') { nextAfterMatch(); return; }
+  if (G.state === 'CLEAR') { startRun(); return; }
+}
+function onConfirm() { onFire(); }
+
+addEventListener('keydown', e => {
+  Audio2.init(); Audio2.resume();
+  if (e.code === 'Space') e.preventDefault();
+  if (e.repeat) return;
+  switch (e.code) {
+    case 'ArrowLeft': case 'KeyA': Input.l = true; break;
+    case 'ArrowRight': case 'KeyD': Input.r = true; break;
+    case 'Space': case 'KeyJ': case 'KeyK': onFire(); break;
+    case 'Enter': onConfirm(); break;
+    case 'KeyM':
+      Audio2.muted = !Audio2.muted;
+      if (Audio2.master) Audio2.master.gain.value = Audio2.muted ? 0 : 0.85;
+      break;
+    case 'KeyD': { // 延迟自测：显示音频输出链路延迟（蓝牙耳机通常 100~200ms，有线 <30ms）
+      const c = Audio2.ctx;
+      if (c) {
+        const out = (c.outputLatency || 0) * 1000;
+        const base = (c.baseLatency || 0) * 1000;
+        const tag = out > 80 ? ' ← 输出延迟大，蓝牙/系统混音的锅，代码治不了' : '（正常范围）';
+        FX.pop(W / 2, 300, `输出延迟 ${out.toFixed(0)}ms · 底层 ${base.toFixed(0)}ms`, out > 80 ? '#ff4d6d' : '#5be36a', true);
+        FX.pop(W / 2, 340, tag, '#9aa4bf');
+      }
+      break;
+    }
+  }
+});
+addEventListener('keyup', e => {
+  switch (e.code) {
+    case 'ArrowLeft': case 'KeyA': Input.l = false; break;
+    case 'ArrowRight': case 'KeyD': Input.r = false; break;
+  }
+});
+
+// 触屏：点按 = 击球/确认；拖动 = 跑位
+let pointerX = null;
+function toLogicalX(e) {
+  const r = cv.getBoundingClientRect();
+  return (e.clientX - r.left) / r.width * W;
+}
+cv.addEventListener('pointerdown', e => {
+  Audio2.init(); Audio2.resume();
+  e.preventDefault();
+  pointerX = toLogicalX(e);
+  onFire();
+});
+cv.addEventListener('pointermove', e => {
+  if (pointerX !== null) pointerX = toLogicalX(e);
+});
+addEventListener('pointerup', () => { pointerX = null; });
+
+// 触摸跑位并入玩家更新：包装一层
+const _playerUpdate = null; // （在 updateGame 中通过 Input.pointerX 处理，见下）
+
+// ---- 触摸跑位注入：覆写 Input 检查 ----
+(function patchTouchMove() {
+  const origUpdate = updateGame;
+  updateGame = function (dt) {
+    if (!G.ghost && pointerX !== null && G.player.stun <= 0) {
+      const dx = clamp(pointerX - G.player.x, -380 * dt, 380 * dt);
+      G.player.x = clamp(G.player.x + dx, 36, W - 36);
+      G.player.run = dx !== 0 ? 1 : 0;
+    }
+    origUpdate(dt);
+  };
+})();
+
+// ---- 主循环 ----
+let last = performance.now();
+let frame = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dtRaw = Math.min(0.05, (t - last) / 1000);
+  last = t;
+  G.time += 0; // （updateGame 内累加）
+  FX.update(dtRaw);
+  Audio2.pump();
+  const dt = FX.hitstop > 0 ? 0 : dtRaw;
+  updateGame(dt);
+  render();
+  frame++;
+}
+
+buildSprites();
+startRun();            // 标题画面 + 幽灵对练开跑
+resetStats();
+requestAnimationFrame(loop);
+
+// ---- 测试钩子（自动化冒烟用） ----
+window.__game = { G, Input, Audio2, FX, trySwing, startMatch, beginServe, ballPos, FOES, JUDGE, aiArrive, maybeMultiBall, launchBall };
+window.__frame = () => frame;
+
+</script>
+</body>
+</html>

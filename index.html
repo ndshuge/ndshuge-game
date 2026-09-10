@@ -102,6 +102,9 @@
   .card.still{--g1:linear-gradient(150deg,#4C5C58,#333F3B)}
   .card.phy{--g1:linear-gradient(150deg,#6B5640,#4A3A28)}
   .card.motu{--g1:linear-gradient(150deg,#4A4238,#26221B)}
+  .card.echo{--g1:linear-gradient(150deg,#3A7C6E,#1E4A44)}
+  .card.beat{--g1:linear-gradient(150deg,#6A3D8C,#3A1E52)}
+  .card.light{--g1:linear-gradient(150deg,#3A4E7C,#1E2A46)}
   .card .body{flex:1;min-width:0}
   .card .t{font-size:16.5px;font-weight:800;letter-spacing:.4px;color:var(--card-ink);
     display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -165,6 +168,9 @@ var IC = {
   phy:'<circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>',
   still:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
   motu:'<path d="m11 10 3 3"/><path d="M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"/><path d="M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"/>',
+  echo:'<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
+  beat:'<path d="m2 2 8 8"/><path d="m22 2-8 8"/><ellipse cx="12" cy="9" rx="10" ry="5"/><path d="M7 13.4v7.9"/><path d="M12 14v8"/><path d="M17 13.4v7.9"/><path d="M2 9v8a10 5 0 0 0 20 0V9"/>',
+  light:'<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
   chev:'<path d="m9 18 6-6-6-6"/>'
 };
 function svg(inner){
@@ -178,7 +184,13 @@ var games = [
   {no:'No.03', cls:'phy', t:'重力花园', tag:'物理 · 解压', icon:'phy',
    d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/'},
   {no:'No.04', cls:'motu', t:'墨途', tag:'水墨 · 平台', icon:'motu',
-   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/'}
+   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/'},
+  {no:'No.05', cls:'echo', t:'回声小径', tag:'像素 · 回声', icon:'echo',
+   d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。', href:'./games/echo-trail/'},
+  {no:'No.06', cls:'beat', t:'鼓点乒乓', tag:'音游 · 街机', icon:'beat',
+   d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。', href:'./games/beat-paddle/'},
+  {no:'No.07', cls:'light', t:'慢光 LIGHTLAG', tag:'太空 · 防御', icon:'light',
+   d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。', href:'./games/lightlag/'}
 ];
 var cards = document.getElementById('cards');
 games.forEach(function(g){
