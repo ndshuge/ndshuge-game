@@ -11,16 +11,13 @@
 <title>鼠哥军械库 · NDSHUGE ARMORY</title>
 <style>
   :root{
-    /* 底色：军绿卡其深底 */
     --bg:#1E2318; --bg2:#262C1C; --bg3:#171B12;
-    /* 羊皮纸卡面 */
     --card:#EAE0C4; --card2:#DDCEA8; --card-ink:#3A2E1F;
-    /* 铜金体系 */
     --brass:#C4A25C; --brass-hi:#E4C87E; --brass-lo:#8A6F35;
-    /* 墨色 / 辅助 */
     --ink:#EDE6D2; --ink2:#C9BE9E; --muted:#9A8E6B;
     --olive:#565F38; --steel:#4C5C58; --sable:#6B5640;
     --sep:rgba(233,224,196,.14);
+    --liked:#A8402F;
     --sh-card:0 2px 3px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.35);
     --ease:cubic-bezier(.32,.72,0,1);
     --ease-spring:cubic-bezier(.34,1.56,.64,1);
@@ -36,13 +33,11 @@
       radial-gradient(90% 60% at 50% -6%, rgba(196,162,92,.13), transparent 60%),
       radial-gradient(70% 40% at 85% 110%, rgba(86,95,56,.35), transparent 65%);
   }
-  /* 纸张噪点做旧层 */
   .grain{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
     background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.28'/></svg>");}
   .wrap{position:relative;z-index:1;max-width:620px;margin:0 auto;
     padding:calc(env(safe-area-inset-top,0px) + 16px) 18px calc(env(safe-area-inset-bottom,0px) + 44px);}
 
-  /* 顶栏：黄铜包边军牌 */
   .topbar{
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     background:linear-gradient(180deg,#262C1C,#1B2013);
@@ -67,7 +62,6 @@
   }
   @media (hover:none){.gh-btn:active{filter:brightness(.85)}}
 
-  /* 大标题：战报式 */
   .hero{padding:10px 2px 20px;border-bottom:1px solid var(--sep);margin-bottom:18px}
   .kick{font-size:11px;font-weight:800;letter-spacing:3.5px;color:var(--brass);text-transform:uppercase;margin-bottom:6px}
   h1{font-size:33px;font-weight:900;letter-spacing:.5px;line-height:1.15;color:var(--ink)}
@@ -75,7 +69,6 @@
   .sub{margin-top:9px;font-size:13px;color:var(--muted);line-height:1.75;letter-spacing:.3px}
   .sub b{color:var(--ink2);font-weight:700}
 
-  /* 游戏卡片：羊皮纸军牌 */
   .cards{display:flex;flex-direction:column;gap:14px}
   .card{
     display:flex;align-items:center;gap:15px;
@@ -92,13 +85,12 @@
     background:linear-gradient(90deg,transparent,var(--brass),transparent);transition:opacity .22s}
   .card .no{position:absolute;top:4px;right:9px;font-size:9px;font-weight:800;letter-spacing:1.5px;
     color:rgba(90,66,33,.42)}
-  /* 识别章：双层铜环 + 军种色底 */
   .card .art{width:60px;height:60px;flex:none;display:flex;align-items:center;justify-content:center;
     position:relative;border-radius:50%;
     box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brass-lo),inset 0 2px 6px rgba(0,0,0,.35);
     background:var(--g1,#4C5C58);color:#F4E8C8}
   .card .art svg{width:28px;height:28px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
-  .card.fps{--g1:linear-gradient(150deg,#5A6B4A,#3D4A30)}
+  .card.ww2{--g1:linear-gradient(150deg,#6B4A2E,#3D2A18)}
   .card.still{--g1:linear-gradient(150deg,#4C5C58,#333F3B)}
   .card.phy{--g1:linear-gradient(150deg,#6B5640,#4A3A28)}
   .card.motu{--g1:linear-gradient(150deg,#4A4238,#26221B)}
@@ -114,15 +106,25 @@
     background:linear-gradient(180deg,#4A5432,#39411F);padding:3px 8px 2px;border-radius:2px;
     box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 1px 2px rgba(0,0,0,.35);flex:none}
   .card .d{margin-top:5px;font-size:12.5px;color:rgba(58,46,31,.72);line-height:1.55;letter-spacing:.2px}
-  .card .go{flex:none;width:30px;height:30px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    border:1px solid rgba(138,111,53,.55);color:#8A6F35;
-    transition:transform .26s var(--ease-spring),background .18s,color .18s,border-color .18s}
-  .card .go svg{width:15px;height:15px}
+  .side{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px}
+
+  /* 点赞按钮：黄铜小盾 */
+  .like{display:flex;flex-direction:column;align-items:center;gap:2px;
+    width:38px;height:44px;border:1px solid rgba(138,111,53,.55);border-radius:4px;
+    background:rgba(255,251,240,.45);color:#8A6F35;cursor:pointer;
+    font-family:inherit;font-size:10.5px;font-weight:800;letter-spacing:.5px;
+    transition:transform .26s var(--ease-spring),background .18s,color .18s,border-color .18s;
+    -webkit-user-select:none;user-select:none}
+  .like svg{width:15px;height:15px}
+  .like .n{line-height:1;min-width:12px}
+  .like .n:empty::after{content:"·"}
+  .like.on{color:var(--liked);border-color:var(--liked);background:rgba(168,64,47,.08)}
+  .like.on svg{fill:var(--liked)}
+  .like:active{filter:brightness(.85)}
   @media (hover:hover){
     .card:hover{transform:translateY(-3px) scale(1.012);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),inset 0 0 0 2px rgba(196,162,92,.5),0 16px 34px rgba(0,0,0,.5)}
     .card:hover::after{opacity:1}
-    .card:hover .go{background:linear-gradient(180deg,#C4A25C,#8A6F35);color:#FFF7E0;border-color:#C4A25C;transform:scale(1.08)}
+    .like:hover{transform:scale(1.1);border-color:var(--liked);color:var(--liked)}
   }
   @media (hover:none){
     .card:active{filter:brightness(.92)}
@@ -153,7 +155,7 @@
   <header class="hero">
     <div class="kick">NDSHUGE ARMORY · EST. 2026</div>
     <h1>鼠哥<span class="am">军械库</span></h1>
-    <p class="sub">自家产的游戏，朋友随便取用。<br>打得好是鼠哥教得好，<b>打得烂</b>是鼠哥坑得妙。<b>新装备持续入库</b>。</p>
+    <p class="sub">自家产的游戏，朋友随便取用。<br>玩得爽就点个<b>赞</b>，鼠哥感激不尽。<b>新装备持续入库</b>。</p>
   </header>
 
   <nav class="cards" id="cards"></nav>
@@ -166,7 +168,7 @@
 
 <script>
 var IC = {
-  fps:'<circle cx="12" cy="12" r="10"/><line x1="22" x2="18" y1="12" y2="12"/><line x1="6" x2="2" y1="12" y2="12"/><line x1="12" x2="12" y1="6" y2="2"/><line x1="12" x2="12" y1="22" y2="18"/>',
+  medal:'<path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/>',
   phy:'<circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>',
   still:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
   motu:'<path d="m11 10 3 3"/><path d="M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"/><path d="M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"/>',
@@ -175,31 +177,68 @@ var IC = {
   light:'<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
   vocal:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
   pong:'<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/>',
-  chev:'<path d="m9 18 6-6-6-6"/>'
+  chev:'<path d="m9 18 6-6-6-6"/>',
+  heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>'
 };
 function svg(inner){
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
 }
 var games = [
-  {no:'No.01', cls:'fps', t:'CS:GO 沙漠练枪场', tag:'FPS · 练枪', icon:'fps',
-   d:'Dust2 经典地图靶场，多模式练枪挑战，跟手感极佳的射击体验。', href:'./games/csgo-dust2/'},
+  {no:'No.01', cls:'ww2', t:'西线前线', tag:'FPS · 战役', icon:'medal',
+   d:'沉浸式二战射击。COD 风格 HUD，指挥官无线电实时喊话，突击东进，德语嘶吼就在耳边。', href:'./games/ww2-frontline/', key:'ww2-frontline'},
   {no:'No.02', cls:'still', t:'凝时 STILL', tag:'弹幕 · 时停', icon:'still',
-   d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。', href:'./games/still/'},
+   d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。', href:'./games/still/', key:'still'},
   {no:'No.03', cls:'phy', t:'重力花园', tag:'物理 · 解压', icon:'phy',
-   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/'},
+   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/', key:'gravity-garden'},
   {no:'No.04', cls:'motu', t:'墨途', tag:'水墨 · 平台', icon:'motu',
-   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/'},
+   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/', key:'motu'},
   {no:'No.05', cls:'echo', t:'回声小径', tag:'像素 · 回声', icon:'echo',
-   d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。', href:'./games/echo-trail/'},
+   d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。', href:'./games/echo-trail/', key:'echo-trail'},
   {no:'No.06', cls:'beat', t:'鼓点乒乓', tag:'音游 · 街机', icon:'beat',
-   d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。', href:'./games/beat-paddle/'},
+   d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。', href:'./games/beat-paddle/', key:'beat-paddle'},
   {no:'No.07', cls:'light', t:'慢光 LIGHTLAG', tag:'太空 · 防御', icon:'light',
-   d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。', href:'./games/lightlag/'},
+   d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。', href:'./games/lightlag/', key:'lightlag'},
   {no:'No.08', cls:'vocal', t:'VOCALON! 节拍革命', tag:'音游 · 原曲', icon:'vocal',
-   d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。', href:'./games/vocalon-chaos/'},
+   d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。', href:'./games/vocalon-chaos/', key:'vocalon-chaos'},
   {no:'No.09', cls:'pong', t:'像素乒乓 CAT vs RAT', tag:'街机 · 对决', icon:'pong',
-   d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。', href:'./games/pixel-pong/'}
+   d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。', href:'./games/pixel-pong/', key:'pixel-pong'}
 ];
+
+/* ---- 点赞：Abacus 免费计数 API（CountAPI 血统），localStorage 防重复 ---- */
+var NS = 'ndshuge-game';
+var API = 'https://abacus.jasoncameron.dev';
+function likedKey(k){ return 'ng-like-' + k; }
+
+function renderCount(el, v){
+  el.textContent = v >= 1000 ? (v/1000).toFixed(1).replace(/\.0$/,'') + 'k' : String(v);
+}
+function fetchCount(key, el){
+  try{
+    fetch(API + '/get/' + NS + '/' + key).then(function(r){ return r.json(); }).then(function(j){
+      if (j && typeof j.value === 'number') renderCount(el, j.value);
+    }).catch(function(){});
+  }catch(e){}
+}
+function bindLike(btn, key){
+  var n = btn.querySelector('.n');
+  var isLiked = localStorage.getItem(likedKey(key)) === '1';
+  if (isLiked) btn.classList.add('on');
+  fetchCount(key, n);
+  btn.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    if (localStorage.getItem(likedKey(key)) === '1') return;
+    localStorage.setItem(likedKey(key), '1');
+    btn.classList.add('on');
+    var cur = parseInt(n.textContent, 10); if (isNaN(cur)) cur = 0;
+    renderCount(n, cur + 1);
+    try{
+      fetch(API + '/hit/' + NS + '/' + key).then(function(r){ return r.json(); }).then(function(j){
+        if (j && typeof j.value === 'number') renderCount(n, j.value);
+      }).catch(function(){});
+    }catch(e){}
+  });
+}
+
 var cards = document.getElementById('cards');
 games.forEach(function(g){
   var a = document.createElement('a');
@@ -210,8 +249,10 @@ games.forEach(function(g){
     '<span class="art">'+svg(IC[g.icon])+'</span>'+
     '<span class="body"><span class="t">'+g.t+'<span class="tag">'+g.tag+'</span></span>'+
     '<span class="d">'+g.d+'</span></span>'+
-    '<span class="go">'+svg(IC.chev)+'</span>';
+    '<span class="side"><button type="button" class="like" aria-label="点赞">'+svg(IC.heart)+'<span class="n"></span></button>'+
+    '<span class="go">'+svg(IC.chev)+'</span></span>';
   cards.appendChild(a);
+  bindLike(a.querySelector('.like'), g.key);
 });
 </script>
 </body>
