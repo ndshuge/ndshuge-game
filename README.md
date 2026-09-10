@@ -16,6 +16,7 @@
 | 鼓点乒乓 | `games/beat-paddle/` | 音游 · 街机 |
 | 慢光 LIGHTLAG | `games/lightlag/` | 太空 · 防御 |
 | VOCALON! 节拍革命 | `games/vocalon-chaos/` | 音游 · 原曲 |
+| 像素乒乓 CAT vs RAT | `games/pixel-pong/` | 街机 · 对决 |
 
 ## 怎么添加新游戏
 

@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>像素乒乓 · CAT vs RAT</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:#070a17 radial-gradient(circle at 50% -20%, #16204a 0%, #070a17 60%);
+    font-family:"Courier New","PingFang SC","Microsoft YaHei",monospace;color:#dbe4ff;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
+  .wrap{width:min(94vw,880px);position:relative}
+  .head{display:flex;align-items:baseline;justify-content:space-between;padding:6px 8px 10px}
+  .logo{font-size:15px;letter-spacing:3px;color:#8fb8ff;font-weight:bold}
+  .logo b{color:#ffd166}
+  .sub{font-size:11px;color:#5b6b9a;letter-spacing:1px}
+  .stage{position:relative;border:2px solid #243055;border-radius:10px;overflow:hidden;
+    box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1px rgba(140,170,255,.06)}
+  canvas{width:100%;height:auto;display:block;image-rendering:pixelated;background:#0c1128}
+  .hud{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;
+    align-items:center;padding:10px 18px;pointer-events:none;z-index:5;font-size:13px}
+  .side{display:flex;align-items:center;gap:8px}
+  .score{font-size:30px;font-weight:bold;letter-spacing:1px;line-height:1;color:#eaf1ff;text-shadow:0 2px 0 #000}
+  .score small{font-size:11px;color:#6b7db0;letter-spacing:2px;display:block}
+  .side.r{flex-direction:row-reverse;text-align:right}
+  .center{text-align:center;position:absolute;left:50%;transform:translateX(-50%)}
+  .rally{font-size:11px;color:#8fa3d8;letter-spacing:2px}
+  .rally b{display:block;font-size:20px;color:#ffd166;min-height:24px}
+  #toast{position:absolute;left:0;right:0;top:37%;text-align:center;pointer-events:none;z-index:6}
+  .pop{font-size:42px;font-weight:bold;letter-spacing:6px;color:#fff;text-shadow:0 4px 0 #000,0 0 26px rgba(255,209,102,.8);
+    animation:pop .5s cubic-bezier(.2,2.2,.4,1) forwards}
+  .pop.bad{color:#ff8b8b;text-shadow:0 4px 0 #000,0 0 26px rgba(255,80,80,.7)}
+  .pop.small{font-size:21px;letter-spacing:2px}
+  @keyframes pop{0%{transform:scale(.2);opacity:0}18%{opacity:1}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .overlay{position:absolute;inset:0;background:rgba(7,10,23,.74);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;z-index:8;
+    text-align:center;padding:24px}
+  .overlay h1{font-size:32px;letter-spacing:4px;color:#fff;text-shadow:0 3px 0 #1b2a52,0 0 30px rgba(120,170,255,.35)}
+  .overlay h1 .c{color:#8fd8ff}.overlay h1 .r{color:#ff7d7d}
+  .vs{font-size:13px;color:#8899cc;letter-spacing:6px;margin:2px 0}
+  .rules{font-size:12px;line-height:2.1;color:#b9c6ea;letter-spacing:.5px;background:rgba(16,24,49,.8);
+    border:1px solid #2b3a63;border-radius:10px;padding:12px 22px}
+  .rules b{color:#ffd166}.rules i{color:#8fd8ff;font-style:normal}
+  .btn{cursor:pointer;pointer-events:auto;background:linear-gradient(#3b6cff,#2447c8);color:#fff;border:none;
+    border-radius:10px;font-size:17px;font-weight:bold;letter-spacing:6px;padding:12px 44px;font-family:inherit;
+    box-shadow:0 5px 0 #162a80,0 10px 22px rgba(36,71,200,.4)}
+  .btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #162a80}
+  .btn.ghost{background:linear-gradient(#23304f,#161f38);box-shadow:0 5px 0 #0c1224;font-size:12px;letter-spacing:3px;padding:8px 18px}
+  .badge{font-size:15px;letter-spacing:2px}
+  .badge.w{color:#7be08a}.badge.l{color:#ff8b8b}
+  .power{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;color:#ffd166;
+    letter-spacing:2px;background:rgba(0,0,0,.35);padding:2px 10px;border-radius:8px;z-index:5;pointer-events:none;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">PIXEL <b>乒乓</b> · CAT vs RAT</div>
+    <div class="sub">鼠标移拍 · 按住蓄力 · W/S 旋转 · 7 分一局</div>
+  </div>
+  <div class="stage">
+    <div class="hud">
+      <div class="side"><div class="score"><span id="youScore">0</span><small>YOU · 猫</small></div></div>
+      <div class="center">
+        <div class="rally" id="rallyTxt">RALLY 0</div>
+        <div class="rally"><b id="centerMsg">·</b></div>
+      </div>
+      <div class="side r"><div class="score"><span id="aiScore">0</span><small>RAT · 鼠</small></div></div>
+    </div>
+    <canvas id="cv" width="640" height="360"></canvas>
+    <div id="toast"></div>
+    <div class="power" id="powerTxt"></div>
+
+    <div class="overlay" id="ovStart">
+      <h1><span class="c">猫</span> 对 <span class="r">鼠</span> · 像素乒乓</h1>
+      <div class="vs">ARCADE PING-PONG RALLY</div>
+      <div class="rules">
+        老鼠的每个球都带<b>重力弧线</b> —— 鼠标上下移动接住它，别让球飞出左界<br>
+        <span style="color:#8fd8ff">按住左键蓄力</span> = 扣杀抽球　<span style="color:#8fd8ff">W</span> 上旋急坠　<span style="color:#8fd8ff">S</span> 下旋飘球<br>
+        旋转会<b>骗到老鼠的预判</b>；贴拍心回球 = <span style="color:#ffd166">PERFECT</span> 更快更转<br>
+        对拉越久球越快；⭐<span style="color:#ffd166">金球</span>会悄悄入场 —— 抢到吃增益，被老鼠偷走它会变猛<br>
+        <span style="color:#5b6b9a;font-size:10px">P 暂停 · R 重开 · 音效开关在下方</span>
+      </div>
+      <button class="btn" id="btnStart">开 局</button>
+      <div class="foot"><button class="btn ghost" id="btnMute">♪ 音效开</button></div>
+    </div>
+    <div class="overlay" id="ovWin" style="display:none">
+      <h1>🎉 你赢了！</h1>
+      <div class="badge w" id="winTxt"></div>
+      <button class="btn" id="btnAgainW">再来一局</button>
+    </div>
+    <div class="overlay" id="ovLose" style="display:none">
+      <h1 style="color:#ff9d9d">被老鼠拿下了…</h1>
+      <div class="badge l" id="loseTxt"></div>
+      <button class="btn" id="btnAgainL">复仇！</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+/* ================= 画布 / DOM ================= */
+var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),W=640,H=360;
+function $(id){return document.getElementById(id);}
+var youScoreEl=$('youScore'),aiScoreEl=$('aiScore'),rallyTxt=$('rallyTxt'),
+    centerMsg=$('centerMsg'),toastEl=$('toast'),powerTxt=$('powerTxt');
+var ovStart=$('ovStart'),ovWin=$('ovWin'),ovLose=$('ovLose');
+
+/* ================= 音频（手感：三层合成 + BGM） ================= */
+var actx=null,master=null,muted=false,bgmStep=0,bgmOn=false;
+function audioInit(){
+  if(actx)return;
+  try{
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    master=actx.createGain();master.gain.value=muted?0:1;master.connect(actx.destination);
+    startBGM();
+  }catch(e){}
+}
+function env(g,t0,a,d,peak){g.gain.setValueAtTime(0.0001,t0);g.gain.linearRampToValueAtTime(peak,t0+a);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+a+d);}
+function tone(type,f0,f1,dur,peak,delay){ if(!actx||!master)return;var t=actx.currentTime+(delay||0);
+  var o=actx.createOscillator(),g=actx.createGain();o.type=type;
+  o.frequency.setValueAtTime(f0,t);if(f1)o.frequency.exponentialRampToValueAtTime(Math.max(30,f1),t+dur);
+  env(g,t,0.004,dur,peak);o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+0.06);}
+function noise(dur,peak,f0,f1,Q,delay){ if(!actx||!master)return;var t=actx.currentTime+(delay||0);
+  var n=Math.max(1,Math.floor(actx.sampleRate*dur)),buf=actx.createBuffer(1,n,actx.sampleRate),d=buf.getChannelData(0);
+  for(var i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
+  var s=actx.createBufferSource();s.buffer=buf;var f=actx.createBiquadFilter();f.type='bandpass';f.Q.value=Q||0.8;
+  f.frequency.setValueAtTime(f0||1000,t);f.frequency.exponentialRampToValueAtTime(Math.max(60,f1||200),t+dur);
+  var g=actx.createGain();env(g,t,0.004,dur,peak);s.connect(f);f.connect(g);g.connect(master);s.start(t);}
+function startBGM(){
+  if(bgmOn)return;bgmOn=true;
+  var bass=[110,87.31,130.81,98,110,87.31,146.83,98];   // Am F C G Am F Dm G
+  setInterval(function(){
+    if(!actx||muted)return;
+    var n=bass[bgmStep%8];
+    tone('square',n,n,0.16,0.045); tone('square',n*2,n*2,0.12,0.018);
+    if(bgmStep%2===0)noise(0.02,0.03,6000,3000,1);
+    bgmStep++;
+  },190);
+}
+var SND={
+  hit:function(strong){ noise(0.08,strong?0.5:0.34,1500,200,0.7); tone('sine',150,56,0.09,strong?0.55:0.38); },
+  perfect:function(){ tone('triangle',1150,1150,0.05,0.26); tone('triangle',1530,1530,0.1,0.26,0.05); tone('sine',190,120,0.12,0.32,0.02); },
+  aiHit:function(){ noise(0.07,0.2,1000+Math.random()*300,180,0.7); tone('sine',115+Math.random()*60,55,0.08,0.2); },
+  bounce:function(){ noise(0.024,0.11,2500,900,2); },
+  score:function(){ tone('square',523,523,0.07,0.2); tone('square',659,659,0.07,0.2,0.08); tone('square',880,880,0.16,0.22,0.16); },
+  lose:function(){ tone('sawtooth',330,180,0.2,0.2); tone('sawtooth',160,90,0.3,0.2,0.16); },
+  slam:function(){ noise(0.26,0.28,900,110,1.2); tone('sine',300,70,0.24,0.36); },
+  gold:function(){ [660,880,1100].forEach(function(f,i){tone('square',f,f,0.08,0.2,i*0.06);}); },
+  serve:function(){ tone('square',420,640,0.1,0.16); },
+  ui:function(){ tone('square',600,380,0.05,0.1); }
+};
+$('btnMute').onclick=function(){muted=!muted;this.textContent=muted?'♪ 音效关':'♪ 音效开';
+  if(master)master.gain.value=muted?0:1;};
+$('btnStart').onclick=function(){ovStart.style.display='none';audioInit();resetGame();};
+
+/* ================= 手感参数（调这里 = 调游戏） ================= */
+var P={ g:600, floorY:300, ceilY:18, r:6,
+  px:34, ax:606,                // 拍平面 x
+  padMaxSpd:1500,               // 玩家拍速度
+  baseHit:296,                  // 基础回球速
+  serveV:284,                   // 发球速
+  maxHit:480,                   // 满蓄力速
+  chargeRate:1.3,               // 蓄力速度/s
+  rallyAccel:9,                 // 每拍双方球速增量(封顶)
+  speedCap:400,
+  aiBase:268,                   // AI 拍基准速度
+  spinAcc:470,                  // 旋转附加加速度
+  spinBlindTop:0.95,            // AI 急坠基本全知：上旋威胁=难控窗口收窄(数据驱动)，不靠相位错乱
+  spinBlindBack:0.97,           // AI 对下旋几乎全知（飘球看得懂 → 高吊非必胜）  perfWin:11                    // perfect 窗口 px
+};
+
+/* ================= 状态 ================= */
+var state='idle';               // idle|play|point|pause|over
+var you=0,ai=0,rally=0,best=0;
+var youP=0,aiP=0;               // 拍位置(y)
+var halfP=24,halfA=24;          // 拍半长(可被道具改变)
+var charge=0,charging=false;
+var balls=[],gold=null;
+var padFX={big:0,multi:false};  // 玩家增益
+var aiFX={boost:0};             // AI 狂暴剩余秒
+var aiSlowT=0;                  // 老鼠减速剩余秒
+var nextBlast=false;            // ⚡下一次击球必爆
+var mood={you:0,ai:0};          // 0闲 1乐 2怒 3汗 4惊
+var mouseY=H/2,mouseDown=false,keys={};
+var freeze=0,shake=0,flash=0;
+var particles=[],rings=[];
+var goldTimer=8,lastTime=0;
+
+function rnd(a,b){return a+Math.random()*(b-a);}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+
+/* ================= 反馈：粒子 / 震屏 / 白闪 / 提示 ================= */
+function spawn(x,y,n,cols,speed,opts){
+  opts=opts||{};
+  for(var i=0;i<n&&particles.length<300;i++){
+    var a=rnd(0,6.283),s=rnd(speed*0.3,speed);
+    particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-20,
+      life:opts.life||rnd(0.25,0.5),age:0,color:cols[(Math.random()*cols.length)|0],
+      size:opts.size||rnd(1.5,3),grav:opts.grav||300});
+  }
+}
+function ring(x,y,color,scale){ rings.push({x:x,y:y,r:4*scale,max:30*scale,color:color,age:0,life:0.2}); }
+function pop(msg,cls){ toastEl.innerHTML='<div class="pop '+(cls||'')+'">'+msg+'</div>';
+  clearTimeout(pop.t);pop.t=setTimeout(function(){toastEl.innerHTML='';},620);}
+function popSmall(msg){ toastEl.innerHTML='<div class="pop small">'+msg+'</div>';
+  clearTimeout(pop.t);pop.t=setTimeout(function(){toastEl.innerHTML='';},900);}
+function setPower(t){ if(t){powerTxt.style.display='block';powerTxt.textContent=t;}
+  else powerTxt.style.display='none'; }
+
+/* ================= 球 ================= */
+function ball(x,y,vx,vy,spin){return{x:x,y:y,px:x,py:y,vx:vx,vy:vy,spin:spin||0,spinT:0,fire:0,dead:false,r:6,hitAt:performance.now()};}
+function serve(fromAI){
+  rally=0;rallyTxt.textContent='RALLY 0';
+  balls=[];gold=null;
+  var dir=fromAI?-1:1;
+  var b=ball(fromAI?555:85,H/2+rnd(20,70),dir*P.serveV,-rnd(150,210),0);
+  balls.push(b);SND.serve();
+}
+/* 击球核心。返回 {perf,strong} 供反馈 */
+function strike(b,byAI,dy){
+  b.hitAt=performance.now();
+  var dir=byAI?-1:1;
+  var strong=false,perf=false,vx,vy,sp=0;
+  if(byAI){
+    var v=rnd(P.baseHit*1.0,P.baseHit*1.22);
+    var aiCr=aiFX.boost>0?0.30:0.20;           // 扣杀概率
+    var roll=Math.random();
+    if(roll<aiCr+(rally>7?0.08:0)){v=rnd(P.maxHit*0.82,P.maxHit*0.95);strong=true;}
+    if(Math.random()<0.42)sp=Math.random()<0.5?1:-1;   // AI 也爱搓球
+    var boost=Math.min(rally*P.rallyAccel,150);
+    v=Math.min(v+boost,P.maxHit+25);
+    vx=dir*v;
+    vy=-rnd(130,230);
+    if(sp===1)vy*=-0.55;                            // 上旋低平
+    if(sp===-1)vy*=-1.35;                           // 下旋高飘
+    b.spin=sp;b.spinT=0.75;
+    b.hadTop=(sp===1);b.hadBack=(sp===-1);
+    b.kind=sp;
+    if(strong){SND.slam();shake=Math.max(shake,0.2);spawn(b.x,b.y,9,['#ffd166','#ff9d5c','#fff'],120,{grav:200});}
+    else SND.aiHit();
+  }else{
+    var c=(charging&&mouseDown)?charge:0;
+    perf=Math.abs(dy)<=P.perfWin;
+    var v=P.baseHit+c*(P.maxHit-P.baseHit);
+    if(perf)v*=1.22;
+    if(keys['w'])sp=1; else if(keys['s'])sp=-1;
+    vx=dir*v;
+    vy=sp===1?-rnd(80,130):(sp===-1?-rnd(200,290):-rnd(140,225));
+    if(sp===1)vx*=1.13;                       // 上旋：出手更快，进攻弧线
+    if(sp===-1)vx*=0.92;                       // 下旋：慢速飘球，给对手扑救时间
+    b.spin=sp;b.spinT=sp?0.95:0;              // 旋转全程压住球（作用 0.95s）
+    b.hadTop=(sp===1);b.hadBack=(sp===-1);
+    b.kind=sp;                                 // 旋转身份：全程携带（上旋=难控球）
+    strong=c>0.55||perf;
+    if(nextBlast){nextBlast=false;strong=true;vx*=1.2;b.fire=2.4;sp=0;b.spin=0;b.spinT=0;b.hadTop=false;b.hadBack=false;b.kind=0;
+      pop('⚡ 必杀一击！');}
+    charging=false;charge=0;
+    var boost=Math.min(rally*P.rallyAccel,150);
+    vx=Math.sign(vx)*Math.min(Math.abs(vx)+boost,P.maxHit+25);
+    if(strong){SND.slam();shake=Math.max(shake,perf?0.5:0.28);flash=Math.max(flash,0.1);
+      if(!b.fire)b.fire=1.5;
+      ring(b.x,b.y,perf?'#ffd166':'#9fd8ff',perf?1.5:1);spawn(b.x,b.y,perf?9:5,['#fff','#ffd166'],perf?200:130,{size:2.2,life:0.4});}
+    else{SND.hit(false);ring(b.x,b.y,'#9fd8ff',0.7);spawn(b.x,b.y,4,['#9fd8ff','#eaf3ff'],100);}
+    setMood('you',1,450);
+    /* 双球道具：出手后克隆一个分身 */
+    if(padFX.multi){padFX.multi=false;
+      var c2=ball(b.x+30,b.y+rnd(-22,22),b.vx*0.62,b.vy+rnd(20,70),0);
+      c2.fire=1.6;balls.push(c2);ring(c2.x,c2.y,'#ff9d5c',1);pop('🌀 双球来了！');}
+  }
+  b.vx=vx;b.vy=vy;
+  freeze=byAI?0:(strong?0.055:0.03);
+  rally++;rallyTxt.textContent='RALLY '+rally;
+  if(rally>best)best=rally;
+}
+function setMood(who,m,ms){
+  mood[who]=m;
+  clearTimeout(setMood['t'+who]);
+  if(ms)setMood['t'+who]=setTimeout(function(){if(mood[who]===m)mood[who]=0;},ms);
+}
+
+/* ================= 物理更新（含碰撞） ================= */
+function stepBall(b,dt){
+  b.px=b.x;b.py=b.y;
+  if(b.spin!==0&&b.spinT>0){
+    b.spinT-=dt;
+    b.vy+=P.spinAcc*(b.spin>0?1:-1)*dt;
+    b.vx+=(b.spin>0?95:-75)*dt;
+  }else b.spin=0;
+  b.vy+=P.g*dt;b.x+=b.vx*dt;b.y+=b.vy*dt;
+  if(b.y-b.r<P.ceilY){b.y=P.ceilY+b.r;b.vy=Math.abs(b.vy)*0.9;}
+  if(b.y+b.r>P.floorY){
+    b.y=P.floorY-b.r;
+    var k=0.74;                    // bounce 反弹统一（与 AI 模拟器同步，旋转威胁不走悬崖式盲点）
+    b.vy=Math.abs(b.vy)<50?-130:-Math.abs(b.vy)*k;
+    if(b.hadTop){b.vx=Math.min(b.vx*1.06,P.maxHit+60);b.hadTop=false;}
+    else if(b.hadBack){b.vx*=0.88;b.hadBack=false;}
+    SND.bounce();spawn(b.x,P.floorY-3,2,['#9fe0b5','#5f9b77'],55,{grav:-50,life:0.22,size:1.5});
+  }
+  if(b.fire>0){
+    b.fire-=dt;
+    if(Math.random()<0.75)particles.push({x:b.x,y:b.y,vx:rnd(-18,18),vy:rnd(30,80),life:rnd(0.12,0.3),age:0,
+      color:Math.random()<0.5?'#ff9d5c':'#ffd166',size:rnd(1.5,3),grav:-200});
+  }
+  /* 玩家拍 */
+  if(b.vx<0&&b.x-b.r<=P.px&&b.px-b.r>P.px){
+    if(Math.abs(b.y-youP)<=halfP+b.r*0.55){ b.x=P.px+b.r+0.01;strike(b,false,b.y-youP); }
+    else{ charging=false;charge=0; }            // 挥空
+  }
+  /* AI 拍：上旋球按速度给“顶不住”失误率（平滑概率，无几何悬崖），其余统一判定 */
+  if(b.vx>0&&b.x+b.r>=P.ax&&b.px+b.r<P.ax){
+    var eff=b.y>280?10:0;
+    var can=Math.abs(b.y-aiP)<=halfA+b.r*0.55+eff;
+    if(can&&b.kind===1&&Math.random()<Math.min(0.42,Math.max(0,(b.vx-310))/560)){
+      can=false;                                 // 强上旋顶手，球擦拍漏过
+      spawn(b.x,b.y,4,['#ffd166','#fff'],90,{life:0.25});
+    }
+    if(can){ b.x=P.ax-b.r-0.01;strike(b,true,0); }
+  }
+  if(b.x+b.r<-14&&!b.dead){b.dead=true;endRally(false,'漏球');}
+  if(b.x-b.r>W+14&&!b.dead){b.dead=true;endRally(true,'老鼠漏球');}
+}
+/* AI：预判(带旋转盲区) + 移动。coeff=AI 认为的旋转系数(0=全知,数值=盲区) */
+function simulate(b,toX,coeff){
+  var t=0,xx=b.x,yy=b.y,vxx=b.vx,vyy=b.vy,sp=b.spin,st=b.spinT;
+  var simBack=!!b.hadBack;          // 下旋吸短与真实同步；上旋威胁不靠预测差而靠“难控”收窄窗口
+  for(var i=0;i<400;i++){
+    t+=1/240;
+    var sacc=P.spinAcc*(coeff===0?1:coeff);   // coeff=AI 以为的旋转效力(0=全知预测)
+    if(sp!==0&&st>0){st-=1/240;vyy+=sacc*(sp>0?1:-1)/240;vxx+=(sp>0?95:-75)/240;}
+    vyy+=P.g/240;xx+=vxx/240;yy+=vyy/240;
+    if(yy-6<18){yy=24;vyy=Math.abs(vyy)*0.9;}
+    if(yy+6>P.floorY){
+      yy=P.floorY-6;
+      vyy=Math.abs(vyy)<50?-130:-Math.abs(vyy)*0.74;
+      if(simBack){vxx*=0.88;simBack=false;}
+    }
+    if(xx>=toX)return{t:t,y:yy};
+    if(xx>W+14)return null;
+  }
+  return null;
+}
+var aiLock={ball:null,y:0,hitAtSeen:0};   // AI 锁定追击目标（像人一样：判断落点后朝它跑）
+function aiThink(dt){
+  var d=Math.min(0.92,0.62+you*0.05-ai*0.025+Math.min(rally,12)*0.008);  // 前12拍热身
+  var react=0.24-0.17*d;                 // 反应延迟：难度越低反应越慢
+  var now=performance.now();
+  /* 失效：球死了 / 被打回 / 被重新击打 */
+  var L=aiLock;
+  if(L.ball&&(L.ball.dead||L.ball.vx<=0||L.ball.hitAt!==L.hitAtSeen))L.ball=null;
+  /* 找最紧急新目标 */
+  var cand=null,bestT=1e9,candY=0;
+  balls.forEach(function(b){
+    if(b.dead||b.vx<=0)return;
+    if((now-b.hitAt)/1000<react)return;  // 还没看见
+    var coeff=b.spin>0?P.spinBlindTop:(b.spin<0?P.spinBlindBack:0);
+    var hit=simulate(b,P.ax,coeff);
+    if(!hit)return;
+    if(hit.t<bestT){bestT=hit.t;cand=b;candY=hit.y;}
+  });
+  if(cand&&cand!==L.ball){
+    if(!L.ball||bestT<2.0){             // 新球比当前锁更急(或首球)才换
+      L.ball=cand;L.y=candY;L.hitAtSeen=cand.hitAt;
+      var le=(1-d)*18+Math.abs(candY-aiP)*0.04;
+      le*=1+Math.max(0,rally-20)*0.03;  // 疲劳：长对拉失准
+      L.y+=rnd(-le,le);                 // 落点判断误差在锁定瞬间一次摇定
+    }
+  }
+  var target=null;
+  if(L.ball&&L.ball.x<P.ax+30){target=L.y;}
+  /* 金球实时追（不吃旋转，无需锁） */
+  var gT=null,gBest=1e9;
+  if(gold&&gold.active&&gold.vx>0){
+    var gh=simulate(gold,P.ax,0);
+    if(gh&&(target===null||gh.t<bestT-0.25)){gT=gh.y;gBest=gh.t;}
+  }
+  if(gT!==null&&(target===null||gBest<bestT-0.25)){target=gT;L.ball=null;}
+  if(target===null)target=H/2+Math.sin(now*0.0012)*30;
+  var spd=P.aiBase*(aiFX.boost>0?1.32:1)*(aiSlowT>0?0.5:1)*(0.68+0.5*d);
+  var maxStep=spd*dt;
+  aiP+=clamp(target-aiP,-maxStep,maxStep);
+  aiP=clamp(aiP,26,P.floorY-6-halfA);
+}
+/* 金球生成/更新 */
+function spawnGold(){
+  if(gold||state!=='play')return;
+  var types=['big','multi','slow','charge'];
+  var dir=Math.random()<0.62?-1:1;   /* 六成向左飞 → 玩家机会更多 */
+  gold={active:true,out:false,r:5,x:320,y:rnd(90,200),px:0,py:0,
+    vx:dir*rnd(150,185),vy:rnd(-210,-130),type:types[(Math.random()*types.length)|0],t:14};
+  pop('⭐ 金球入场！');
+}
+function stepGold(dt){
+  if(!gold)return;
+  var g=gold;
+  g.t-=dt;
+  g.px=g.x;g.py=g.y;
+  g.vy+=P.g*dt;g.x+=g.vx*dt;g.y+=g.vy*dt;
+  if(g.y-g.r*1.5<8){g.y=8+g.r*1.5;g.vy=Math.abs(g.vy)*0.85;}
+  if(g.y+g.r>P.floorY){g.y=P.floorY-g.r;g.vy=-Math.abs(g.vy)*0.7;spawn(g.x,P.floorY-3,4,['#ffd166'],70,{grav:-50,life:0.25});}
+  /* 玩家侧吃到 */
+  if(g.vx<0&&g.x-g.r<=P.px&&g.px-g.r>P.px){
+    if(Math.abs(g.y-youP)<=halfP+g.r+6){ eatGold(false);return; }
+  }
+  if(g.vx>0&&g.x+g.r>=P.ax&&g.px+g.r<P.ax){
+    if(Math.abs(g.y-aiP)<=halfA+g.r+6){ eatGold(true);return; }
+  }
+  if(g.x<-14||g.x>W+14||g.t<=0){
+    if(g.x<-14)popSmall('⭐ 金球飞走了…');
+    gold=null;
+  }
+}
+function eatGold(byAI){
+  var g=gold;gold=null;
+  spawn(g.x,g.y,16,['#ffd166','#fff','#ffb347'],170,{size:2.5,life:0.5});
+  ring(g.x,g.y,'#ffd166',1.6);
+  if(byAI){
+    SND.gold();aiFX.boost=6;
+    popSmall('老鼠抢到⭐金球，狂暴了！');setMood('ai',1,1100);
+    spawn(400,60,10,['#ffd166','#ff7d7d'],200);
+  }else{
+    SND.gold();
+    if(g.type==='big'){padFX.big=8;popSmall('📏 巨拍 8 秒！');}
+    else if(g.type==='multi'){padFX.multi=true;popSmall('🌀 下一记重球 = 双球！');}
+    else if(g.type==='slow'){aiSlowT=8;popSmall('🐌 老鼠减速 8 秒！');}
+    else if(g.type==='charge'){nextBlast=true;popSmall('⚡ 下一次击球必爆！');}
+    setMood('you',1,700);
+  }
+  halfP=padFX.big>0?40:24;
+}
+
+/* ================= 得分回合 ================= */
+function endRally(youWin,why){
+  if(state!=='play')return;
+  state='point';freeze=0.07;flash=0.3;shake=0.36;
+  if(youWin){
+    you++;youScoreEl.textContent=you;SND.score();pop('得分！'+(why||''),'');
+    setMood('ai',4,900);setMood('you',1,800);
+    spawn(W-60,70,24,['#ffd166','#fff','#7be08a'],250,{size:2.4,life:0.7,grav:120});
+  }else{
+    ai++;aiScoreEl.textContent=ai;SND.lose();pop('丢分：'+(why||''),'bad');
+    setMood('you',3,900);setMood('ai',1,800);
+    spawn(60,70,16,['#ff8b8b','#ffd166'],210,{size:2.2,life:0.6});
+  }
+  setTimeout(function(){
+    if(you>=7){state='over';$('winTxt').textContent='最佳对拉 '+best+' 拍 · 比分 '+you+' : '+ai;ovWin.style.display='flex';}
+    else if(ai>=7){state='over';$('loseTxt').textContent='最佳对拉 '+best+' 拍 · 比分 '+you+' : '+ai;ovLose.style.display='flex';}
+    else{state='play';serve(youWin);}   // 赢方发球
+  },950);
+}
+
+/* ================= 重置 ================= */
+function resetGame(){
+  ovWin.style.display='none';ovLose.style.display='none';
+  you=0;ai=0;youScoreEl.textContent='0';aiScoreEl.textContent='0';
+  rally=0;best=0;balls=[];particles=[];rings=[];gold=null;
+  youP=H/2;aiP=H/2;charge=0;charging=false;halfP=24;halfA=24;
+  padFX.big=0;padFX.multi=false;aiFX.boost=0;aiSlowT=0;nextBlast=false;
+  mood.you=0;mood.ai=0;setPower(null);goldTimer=rnd(5,7);
+  state='play';
+  serve(Math.random()<0.5);
+}
+$('btnAgainW').onclick=$('btnAgainL').onclick=function(){audioInit();resetGame();};
+
+/* ================= 输入 ================= */
+cv.addEventListener('mousemove',function(e){
+  var r=cv.getBoundingClientRect();
+  mouseY=(e.clientY-r.top)*(H/r.height);
+});
+cv.addEventListener('mousedown',function(e){
+  if(e.button===0){audioInit();if(state==='play'){mouseDown=true;charging=true;charge=0;}}
+});
+window.addEventListener('mouseup',function(e){if(e.button===0){mouseDown=false;charging=false;}});
+window.addEventListener('keydown',function(e){
+  var k=e.key.toLowerCase();keys[k]=true;
+  if(k==='p')togglePause();
+  if(k==='r'&&state!=='idle')resetGame();
+});
+window.addEventListener('keyup',function(e){keys[e.key.toLowerCase()]=false;});
+function togglePause(){
+  if(state==='play'){state='pause';centerMsg.textContent='⏸';}
+  else if(state==='pause'){state='play';centerMsg.textContent='·';}
+}
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden&&state==='play')togglePause();
+});
+
+/* ================= 主更新 ================= */
+function update(dt){
+  if(state==='idle'||state==='pause')return;
+  /* 玩家拍跟随鼠标 */
+  var yTop=30,yBot=P.floorY-6-halfP;
+  var diff=clamp(mouseY,yTop,yBot)-youP,maxStep=P.padMaxSpd*dt;
+  youP+=clamp(diff,-maxStep,maxStep);
+  /* 蓄力 */
+  if(charging&&state==='play')charge=Math.min(1,charge+P.chargeRate*dt);
+  /* 增益提示条 */
+  if(nextBlast)setPower('⚡ 必杀一击就绪 · 下一拍');
+  else if(aiFX.boost>0)setPower('🔥 老鼠狂暴中');
+  else if(aiSlowT>0)setPower('🐌 老鼠减速中');
+  else if(padFX.multi)setPower('🌀 双球待发 · 打一记重球');
+  else if(padFX.big>0)setPower('📏 巨拍剩余 '+Math.ceil(padFX.big)+'s');
+  else setPower(null);
+  if(state==='play'){
+    if(aiFX.boost>0)aiFX.boost-=dt;
+    if(aiSlowT>0)aiSlowT-=dt;
+    if(padFX.big>0){padFX.big-=dt;halfP=40;if(padFX.big<=0){padFX.big=0;halfP=24;}}
+    else halfP=24;
+    aiThink(dt);
+    var n=balls.length;
+    for(var i=0;i<n;i++)if(!balls[i].dead)stepBall(balls[i],dt);
+    /* 金球：在场就推进，消失后计时刷新 */
+    if(gold)stepGold(dt);
+    else{goldTimer-=dt;if(goldTimer<=0){goldTimer=rnd(6,9);spawnGold();}}
+    centerMsg.textContent='·';
+  }else{
+    centerMsg.textContent=state==='point'?'…':'·';
+  }
+  /* 粒子/环 */
+  for(var j=particles.length-1;j>=0;j--){
+    var p=particles[j];p.age+=dt;
+    if(p.age>p.life){particles.splice(j,1);continue;}
+    p.vy+=p.grav*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;
+  }
+  for(var k=rings.length-1;k>=0;k--){
+    var c=rings[k];c.age+=dt;c.r+=(c.max-c.r)*dt*16;
+    if(c.age>c.life)rings.splice(k,1);
+  }
+  if(shake>0)shake-=dt*2.3;
+  if(flash>0)flash-=dt*1.5;
+}
+
+/* ================= 渲染 ================= */
+function px(x){return Math.round(x);}
+function drawFace(x,y,isAI,m){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle=isAI?'#c9ccd8':'#e8b98a';
+  ctx.fillRect(-6,-5,12,10);
+  ctx.fillStyle=isAI?'#a8acc0':'#caa077';
+  ctx.fillRect(-6,3,12,2);
+  if(isAI){
+    ctx.fillStyle='#c98bd8';ctx.fillRect(-8,-8,4,5);ctx.fillRect(4,-8,4,5);
+    ctx.fillStyle='#8fd8ff';ctx.fillRect(-6,-7,2,2);ctx.fillRect(6,-7,2,2);
+  }else{
+    ctx.fillStyle='#ff8b6b';ctx.fillRect(-8,-8,4,5);ctx.fillRect(4,-8,4,5);
+    ctx.fillStyle='#ffb3c8';ctx.fillRect(-6,-7,2,2);ctx.fillRect(6,-7,2,2);
+  }
+  ctx.fillStyle='#0c1128';
+  if(m===1){ctx.fillRect(-4,-3,2,3);ctx.fillRect(2,-3,2,3);ctx.fillRect(-3,1,6,1);}
+  else if(m===2){ctx.fillRect(-5,-4,3,1);ctx.fillRect(2,-4,3,1);ctx.fillRect(-4,-2,2,2);ctx.fillRect(2,-2,2,2);
+    ctx.fillStyle='#fff';ctx.fillRect(-4,-2,1,1);ctx.fillRect(2,-2,1,1);}
+  else if(m===3){ctx.fillRect(-4,-3,2,2);ctx.fillRect(2,-3,2,2);
+    ctx.fillStyle='#7fd8ff';ctx.fillRect(5,-6,2,3);}
+  else if(m===4){ctx.fillStyle='#fff';ctx.fillRect(-5,-4,4,4);ctx.fillRect(1,-4,4,4);
+    ctx.fillStyle='#0c1128';ctx.fillRect(-3,-2,1,1);ctx.fillRect(3,-2,1,1);}
+  else{ctx.fillRect(-4,-2,2,2);ctx.fillRect(2,-2,2,2);}
+  ctx.restore();
+}
+function drawPad(x,y,half,color,isAI,blink){
+  ctx.save();ctx.translate(px(x),px(y));
+  ctx.fillStyle=color;
+  ctx.fillRect(-4,px(-half),8,px(half*2));
+  ctx.fillStyle='rgba(255,255,255,.3)';
+  ctx.fillRect(-2,px(-half+3),3,px(half*2-6));
+  ctx.fillStyle='rgba(255,255,255,.7)';ctx.fillRect(-4,px(-half),8,2);
+  ctx.fillStyle='rgba(0,0,0,.35)';ctx.fillRect(-4,px(half)-2,8,2);
+  /* 拍顶装饰线 */
+  ctx.fillStyle=isAI?'#ffd166':'#ff8b6b';
+  ctx.fillRect(-4,px(-half)-3,8,1);
+  ctx.restore();
+}
+function drawBall(b){
+  if(b.dead)return;
+  var bx=px(b.x),by=px(b.y);
+  for(var i=1;i<=4;i++){
+    ctx.fillStyle='rgba(255,255,255,'+(0.14*(1-i/5)).toFixed(2)+')';
+    ctx.fillRect(px(b.x-b.vx*i*0.016)-3,px(b.y-b.vy*i*0.016)-3,6,6);
+  }
+  if(b.fire>0){ctx.fillStyle='rgba(255,140,60,.45)';ctx.fillRect(bx-6,by-6,12,12);
+    ctx.fillStyle='rgba(255,220,120,.8)';ctx.fillRect(bx-5,by-5,10,10);}
+  ctx.fillStyle=b.fire>0?'#fff':'#ffffff';
+  ctx.fillRect(bx-4,by-4,8,8);
+  ctx.fillStyle='#9fd8ff';ctx.fillRect(bx-2,by-2,4,4);
+  ctx.fillStyle='#fff';ctx.fillRect(bx-1,by-1,2,2);
+  /* 旋转角标：橙=上旋(急坠前冲) 蓝=下旋(飘高吸短) */
+  if(b.spin!==0&&b.spinT>0){
+    ctx.fillStyle=b.spin>0?'#ffb347':'#7fd8ff';
+    ctx.fillRect(bx-7,by+5,4,3);
+  }
+}
+function drawGold(g){
+  var gx=px(g.x),gy=px(g.y);
+  for(var i=1;i<=5;i++){
+    ctx.fillStyle='rgba(255,209,102,'+(0.16*(1-i/5)).toFixed(2)+')';
+    ctx.fillRect(px(g.x-g.vx*i*0.016)-4,px(g.y-g.vy*i*0.016)-4,8,8);
+  }
+  ctx.fillStyle='#ffd166';ctx.fillRect(gx-5,gy-5,10,10);
+  ctx.fillStyle='#b8860b';ctx.fillRect(gx-5,gy-1,10,2);
+  ctx.fillStyle='#fff';ctx.fillRect(gx-2,gy-2,2,2);
+  /* 类型色点 + 角标：绿=巨拍 橙=双球 蓝=减速 紫=必杀 */
+  var tc=g.type==='big'?'#7be08a':(g.type==='multi'?'#ff9d5c':(g.type==='slow'?'#7fd8ff':'#c98bd8'));
+  ctx.fillStyle=tc;ctx.fillRect(gx+3,gy-8,5,5);
+  ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(gx-2,gy-2,2,2);
+}
+function draw(){
+  ctx.imageSmoothingEnabled=false;
+  ctx.save();
+  if(shake>0)ctx.translate(px(rnd(-1,1)*shake*15),px(rnd(-1,1)*shake*15));
+  /* 背景 */
+  ctx.fillStyle='#0c1128';ctx.fillRect(-10,-10,W+20,H+20);
+  ctx.fillStyle='rgba(255,255,255,.025)';
+  for(var gy=0;gy<H;gy+=24)ctx.fillRect(0,gy,W,1);
+  ctx.fillStyle='rgba(90,130,255,.05)';ctx.fillRect(0,0,P.px+20,H);
+  ctx.fillStyle='rgba(255,110,110,.05)';ctx.fillRect(P.ax-20,0,W-P.ax+20,H);
+  /* 网 */
+  ctx.fillStyle='rgba(160,190,255,.45)';
+  for(var ny=P.ceilY+6;ny<P.floorY-4;ny+=12)ctx.fillRect(px(W/2)-1,ny,2,6);
+  ctx.fillStyle='#2c3f78';ctx.fillRect(px(W/2)-24,P.ceilY-6,48,4);
+  /* 桌面 */
+  ctx.fillStyle='#0f3a28';ctx.fillRect(0,P.floorY,W,H-P.floorY+10);
+  ctx.fillStyle='#2b8a58';ctx.fillRect(0,P.floorY,W,4);
+  ctx.fillStyle='#1a5c3a';ctx.fillRect(0,P.floorY+4,W,3);
+  ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(0,P.floorY+7,W,1);
+  ctx.fillStyle='rgba(0,0,0,.14)';
+  for(var t=0;t<W;t+=14)ctx.fillRect(t,P.floorY+10,5,1);
+  /* 中圈装饰 */
+  ctx.fillStyle='rgba(255,255,255,.05)';ctx.fillRect(px(W/2)-3,P.floorY+4,6,4);
+  /* 金球 */
+  if(gold&&gold.active)drawGold(gold);
+  /* 球 */
+  balls.forEach(drawBall);
+  /* 环 */
+  rings.forEach(function(c){
+    ctx.strokeStyle=c.color;ctx.globalAlpha=1-c.age/c.life;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,6.283);ctx.stroke();
+  });
+  ctx.globalAlpha=1;
+  /* 拍（含脸） */
+  drawPad(P.px,youP,halfP,'#7fd8ff',false);
+  drawFace(P.px+15,youP,mood.you,false);
+  drawPad(P.ax,aiP,halfA,'#ff6b6b',true);
+  drawFace(P.ax-15,aiP,mood.ai,true);
+  /* 粒子 */
+  particles.forEach(function(p){
+    var al=Math.max(0,1-p.age/p.life);
+    ctx.globalAlpha=al;ctx.fillStyle=p.color;
+    ctx.fillRect(px(p.x)-p.size/2,px(p.y)-p.size/2,p.size,p.size);
+  });
+  ctx.globalAlpha=1;
+  /* 蓄力条 */
+  if(charging&&charge>0.02&&state==='play'){
+    var bx=20,by=H-24,bw=8,bh=52;
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(bx-1,by-bh-1,bw+2,bh+2);
+    ctx.fillStyle=charge>0.72?'#ff5c5c':(charge>0.4?'#ffd166':'#7be08a');
+    ctx.fillRect(bx,by-bh*charge,bw,bh*charge);
+    ctx.fillStyle='#fff';ctx.fillRect(bx-4,by-bh-8,16,5);
+  }
+  /* 旋转标记 */
+  if(keys['w']&&state==='play')tag(P.px,youP-halfP-22,'上旋·急坠','#ffb3c8');
+  if(keys['s']&&state==='play')tag(P.px,youP+halfP+18,'下旋·飘','#9fd8ff');
+  ctx.restore();
+  if(flash>0){ctx.fillStyle='rgba(255,255,255,'+(flash*0.45).toFixed(3)+')';ctx.fillRect(0,0,W,H);}
+}
+function tag(x,y,txt,col){
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(px(x)-40,px(y)-7,80,15);
+  ctx.fillStyle=col;ctx.fillRect(px(x)-38,px(y)-5,76,11);
+  ctx.fillStyle='#0c1128';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(txt,px(x)+1,px(y)+1);
+  ctx.fillStyle='#fff';ctx.fillText(txt,px(x),px(y));
+}
+
+/* （双球分身已在 strike 内即时生成） */
+
+/* 主循环 */
+var last=0;
+function frame(ts){
+  if(!last)last=ts;
+  var dt=Math.min(0.033,(ts-last)/1000);last=ts;
+  if(freeze>0){draw();freeze-=dt;requestAnimationFrame(frame);return;}
+  update(dt);draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+/* 调试钩子（只读快照，供自动化测试/控制台调试，不影响游戏） */
+if(typeof window!=='undefined')window.__pp=function(){return{balls:balls,gold:gold,state:state,youP:youP,aiP:aiP,you:you,ai:ai,rally:rally};};
+})();
+</script>
+</body>
+</html>
