@@ -100,6 +100,41 @@
   .card.vocal{--g1:linear-gradient(150deg,#8C3A5C,#4A1E30)}
   .card.pong{--g1:linear-gradient(150deg,#3A5C8C,#1E304A)}
   .card.rewind{--g1:linear-gradient(150deg,#2A3352,#6B3A1E)}
+  .card.pixel{--g1:linear-gradient(150deg,#4C7C3A,#25401E)}
+
+  /* ---- 不成熟待开发区：一条安静的窄入口 ---- */
+  .dev-slot{margin-top:20px}
+  .dev-toggle{
+    width:100%;display:flex;align-items:center;gap:10px;
+    padding:9px 13px;border-radius:4px;cursor:pointer;
+    font-family:inherit;font-size:11px;font-weight:800;letter-spacing:2.2px;
+    color:rgba(154,142,107,.85);text-transform:uppercase;
+    background:linear-gradient(180deg,rgba(196,162,92,.05),rgba(0,0,0,.14));
+    border:1px dashed rgba(138,111,53,.42);
+    transition:color .2s,border-color .2s,background .2s,transform .26s var(--ease-spring);
+  }
+  .dev-toggle .dot{width:6px;height:6px;flex:none;border-radius:50%;
+    background:var(--brass-lo);box-shadow:0 0 6px rgba(196,162,92,.5);
+    transition:background .2s,box-shadow .2s}
+  .dev-toggle .lbl{flex:1;text-align:left}
+  .dev-toggle .cnt{font-size:10px;letter-spacing:1.2px;color:rgba(154,142,107,.6)}
+  .dev-toggle .chev{width:14px;height:14px;flex:none;transition:transform .32s var(--ease)}
+  .dev-toggle.open{color:var(--brass-hi);border-color:rgba(196,162,92,.6);border-style:solid;
+    background:linear-gradient(180deg,rgba(196,162,92,.13),rgba(0,0,0,.16))}
+  .dev-toggle.open .dot{background:var(--brass-hi);box-shadow:0 0 9px rgba(228,200,126,.8)}
+  .dev-toggle.open .chev{transform:rotate(180deg)}
+  .dev-toggle:active{filter:brightness(.9)}
+  @media (hover:hover){
+    .dev-toggle:hover{color:var(--brass-hi);border-color:rgba(196,162,92,.62);background:linear-gradient(180deg,rgba(196,162,92,.11),rgba(0,0,0,.14))}
+  }
+  .dev-note{margin:9px 2px 0;font-size:11.5px;line-height:1.7;color:rgba(154,142,107,.72);letter-spacing:.3px}
+  .dev-note b{color:var(--ink2);font-weight:700}
+  .dev-body{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(138,111,53,.28)}
+  .dev-body.show{display:block;animation:devIn .42s var(--ease)}
+  @keyframes devIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  .dev-body .cards{gap:12px}
+  .dev-body .card .art{filter:saturate(.7) brightness(.92)}
+  .dev-body .card .t{font-size:15px}
   .card .body{flex:1;min-width:0}
   .card .t{font-size:16.5px;font-weight:800;letter-spacing:.4px;color:var(--card-ink);
     display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -159,10 +194,23 @@
   <header class="hero">
     <div class="kick">NDSHUGE ARMORY · EST. 2026</div>
     <h1>鼠哥<span class="am">军械库</span></h1>
-    <p class="sub">自家产的游戏，朋友随便取用。<br>玩得爽就点个<b>赞</b>，鼠哥感激不尽。<b>新装备持续入库</b>。</p>
+    <p class="sub">自家产的游戏，朋友随便取用。<br>下面这些是<b>正式装备</b>，玩得爽就点个<b>赞</b>。<b>新装备持续入库</b>。</p>
   </header>
 
   <nav class="cards" id="cards"></nav>
+
+  <section class="dev-slot">
+    <button type="button" class="dev-toggle" id="devToggle" aria-expanded="false" aria-controls="devBody">
+      <span class="dot"></span>
+      <span class="lbl">不成熟待开发区</span>
+      <span class="cnt" id="devCnt"></span>
+      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <p class="dev-note">实验品、半成品、手感还在调的东西。点开看看，接受拍砖。</p>
+    <div class="dev-body" id="devBody">
+      <nav class="cards" id="devCards"></nav>
+    </div>
+  </section>
 
   <footer>
     <a href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB 仓库</a>
@@ -200,13 +248,13 @@ var games = [
    d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。', href:'./games/echo-trail/', key:'echo-trail'},
   {no:'No.06', cls:'beat', t:'鼓点乒乓', tag:'音游 · 街机', icon:'beat',
    d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。', href:'./games/beat-paddle/', key:'beat-paddle'},
-  {no:'No.07', cls:'light', t:'慢光 LIGHTLAG', tag:'太空 · 防御', icon:'light',
+  {no:'No.07', cls:'light', t:'慢光 LIGHTLAG', tag:'太空 · 防御', icon:'light', dev:true,
    d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。', href:'./games/lightlag/', key:'lightlag'},
-  {no:'No.08', cls:'vocal', t:'VOCALON! 节拍革命', tag:'音游 · 原曲', icon:'vocal',
+  {no:'No.08', cls:'vocal', t:'VOCALON! 节拍革命', tag:'音游 · 原曲', icon:'vocal', dev:true,
    d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。', href:'./games/vocalon-chaos/', key:'vocalon-chaos'},
-  {no:'No.09', cls:'pong', t:'像素乒乓 CAT vs RAT', tag:'街机 · 对决', icon:'pong',
+  {no:'No.09', cls:'pong', t:'像素乒乓 CAT vs RAT', tag:'街机 · 对决', icon:'pong', dev:true,
    d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。', href:'./games/pixel-pong/', key:'pixel-pong'},
-  {no:'No.10', cls:'rewind', t:'回带 REWINDER', tag:'像素 · 时间', icon:'rewind',
+  {no:'No.10', cls:'rewind', t:'回带 REWINDER', tag:'像素 · 时间', icon:'rewind', dev:true,
    d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。', href:'./games/rewinder/', key:'rewinder'}
 ];
 
@@ -246,8 +294,7 @@ function bindLike(btn, key){
   });
 }
 
-var cards = document.getElementById('cards');
-games.forEach(function(g){
+function makeCard(g){
   var a = document.createElement('a');
   a.className = 'card ' + g.cls;
   a.href = g.href; a.target = '_blank'; a.rel = 'noopener';
@@ -257,8 +304,35 @@ games.forEach(function(g){
     '<span class="body"><span class="t">'+g.t+'<span class="tag">'+g.tag+'</span></span>'+
     '<span class="d">'+g.d+'</span></span>'+
     '<button type="button" class="like" aria-label="点赞">'+svg(IC.heart)+'<span class="n"></span></button>';
-  cards.appendChild(a);
   bindLike(a.querySelector('.like'), g.key);
+  return a;
+}
+
+var cards = document.getElementById('cards');
+var devCards = document.getElementById('devCards');
+games.forEach(function(g){
+  (g.dev ? devCards : cards).appendChild(makeCard(g));
+});
+
+/* ---- 不成熟待开发区：默认收起，展开状态本地记住 ---- */
+var DEV_KEY = 'ng-dev-open';
+var devToggle = document.getElementById('devToggle');
+var devBody = document.getElementById('devBody');
+var devCnt = document.getElementById('devCnt');
+var devN = games.filter(function(g){ return g.dev; }).length;
+devCnt.textContent = devN + ' 件';
+var devOpen = false;
+try{ devOpen = localStorage.getItem(DEV_KEY) === '1'; }catch(e){}
+function applyDev(open){
+  devBody.classList.toggle('show', open);
+  devToggle.classList.toggle('open', open);
+  devToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+applyDev(devOpen);
+devToggle.addEventListener('click', function(){
+  devOpen = !devOpen;
+  applyDev(devOpen);
+  try{ localStorage.setItem(DEV_KEY, devOpen ? '1' : '0'); }catch(e){}
 });
 </script>
 </body>
