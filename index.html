@@ -74,9 +74,13 @@ body.warping #info,body.warping #brand,body.warping #sysbar,body.warping #devslo
          mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent)}
 }
 @media (prefers-reduced-motion:reduce){.swap{animation:none}}
+#boot{position:fixed;inset:0;z-index:50;background:#02030c;pointer-events:none;
+  animation:bootin 1.2s ease-in .45s forwards}
+@keyframes bootin{to{opacity:0}}
 </style>
 </head>
 <body>
+<div id="boot"></div>
 <canvas id="space" width="480" height="270"></canvas>
 <div id="crt"></div>
 <div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARMORY</div>
@@ -97,6 +101,11 @@ body.warping #info,body.warping #brand,body.warping #sysbar,body.warping #devslo
 </div>
 <script>
 'use strict';
+window.addEventListener('error',function(ev){
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:70px;left:8px;right:8px;z-index:99;background:#4a0d16;color:#ffd7d7;font:12px monospace;padding:8px;white-space:pre-wrap;border:1px solid #a33';
+  d.textContent='页面脚本出错：'+ev.message+'（第'+ev.lineno+'行）——把这行字告诉拉里';
+  document.body.appendChild(d);});
 /* 游戏星系：中心恒星=鼠哥游戏厅，游戏=绕轨道行星（常显名字）。
    点任意行星直接跃迁进入该游戏；←→/滑动切换选中浏览。 */
 var GAMES=[
@@ -153,7 +162,7 @@ var warp={active:false,i:-1,t:0,k:0};
 var flash={active:false,t:0};
 var parts=[],wstars=[];
 for(var wi=0;wi<42;wi++)wstars.push({a:rnd(0,TAU),d:rnd(4,300),sp:rnd(260,620),px:-999,py:-999});
-var gdt=1/60,mouseX=CX,mouseY=CY,mox=0,moy=0,shakeT=0,whitePop=0,flameAcc=0;
+var gdt=1/60,mouseX=CX,mouseY=SY,mox=0,moy=0,shakeT=0,whitePop=0,flameAcc=0;
 
 var bgGrad=ctx.createLinearGradient(0,0,0,H);
 bgGrad.addColorStop(0,'#070a1e');bgGrad.addColorStop(1,'#03040e');
@@ -323,7 +332,7 @@ function update(dt,t){
     warp.k=warp.t*warp.t;
     var tp=planets[warp.i];
     var rr=tp.r*(1+warp.k*26);
-    if(!flash.active&&rr>=330){flash.active=true;flash.t=.15;}}
+    if(!flash.active&&rr>=330){flash.active=true;flash.t=.5;}}
   if(flash.active){flash.t-=dt;
     if(flash.t<=0){flash.active=false;location.href=GAMES[warp.i].href;return;}}
   if(warp.active&&!REDUCED){for(var w2=0;w2<wstars.length;w2++){var ws=wstars[w2];
@@ -503,7 +512,7 @@ function render(t){
     ctx.fillRect(bx-4,by,3,1);ctx.fillRect(bx+2,by,3,1);
     ctx.fillRect(bx,by-4,1,3);ctx.fillRect(bx,by+2,1,3);}
   ctx.globalAlpha=1;
-  if(warp.active)drawTunnel();
+  if(false)drawTunnel();
   drawOrbits();
   /* 伪 3D 排序：远（y 小）先画，恒星夹在中间层 */
   var order=planets.filter(visible).slice().sort(function(a,b){return a.y-b.y;});
@@ -521,11 +530,11 @@ function render(t){
   if(whitePop>0){ctx.fillStyle='rgba(255,255,255,'+(whitePop/.12*.5)+')';ctx.fillRect(0,0,W,H);}
   if(warp.active){
     var cg=ctx.createRadialGradient(CX,SY,0,CX,SY,90+warp.k*70);
-    cg.addColorStop(0,'rgba(200,245,255,'+(.12+.45*warp.k)+')');
+    cg.addColorStop(0,'rgba(200,245,255,0)');
     cg.addColorStop(1,'rgba(200,245,255,0)');
     ctx.fillStyle=cg;ctx.fillRect(0,0,W,H);}
-  if(flash.active){var fa=clamp(flash.t/.15,0,1);
-    ctx.fillStyle='rgba(250,252,255,'+(.96*fa)+')';ctx.fillRect(0,0,W,H);}
+  if(flash.active){var fa=1-clamp(flash.t/.5,0,1);   /* 渐黑收场 */
+    ctx.fillStyle='rgba(2,3,10,'+fa+')';ctx.fillRect(0,0,W,H);}
 }
 renderInfo();
 applyDev();
