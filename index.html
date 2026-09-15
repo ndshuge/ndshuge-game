@@ -2,338 +2,514 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1E2318" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14170F" media="(prefers-color-scheme: dark)">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="鼠哥军械库">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050514">
 <title>鼠哥军械库 · NDSHUGE ARMORY</title>
+<link rel="stylesheet" href="https://fontsapi.zeoseven.com/570/main/result.css" />
 <style>
-  :root{
-    --bg:#1E2318; --bg2:#262C1C; --bg3:#171B12;
-    --card:#EAE0C4; --card2:#DDCEA8; --card-ink:#3A2E1F;
-    --brass:#C4A25C; --brass-hi:#E4C87E; --brass-lo:#8A6F35;
-    --ink:#EDE6D2; --ink2:#C9BE9E; --muted:#9A8E6B;
-    --olive:#565F38; --steel:#4C5C58; --sable:#6B5640;
-    --sep:rgba(233,224,196,.14);
-    --liked:#A8402F;
-    --sh-card:0 2px 3px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.35);
-    --ease:cubic-bezier(.32,.72,0,1);
-    --ease-spring:cubic-bezier(.34,1.56,.64,1);
-  }
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{height:100%}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro SC","Segoe UI Variable","Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-    background:var(--bg); color:var(--ink);
-    min-height:100vh; -webkit-font-smoothing:antialiased;
-    touch-action:manipulation;
-    background-image:
-      radial-gradient(90% 60% at 50% -6%, rgba(196,162,92,.13), transparent 60%),
-      radial-gradient(70% 40% at 85% 110%, rgba(86,95,56,.35), transparent 65%);
-  }
-  .grain{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.28'/></svg>");}
-  .wrap{position:relative;z-index:1;max-width:620px;margin:0 auto;
-    padding:calc(env(safe-area-inset-top,0px) + 16px) 18px calc(env(safe-area-inset-bottom,0px) + 44px);}
-
-  .topbar{
-    display:flex;align-items:center;justify-content:space-between;gap:10px;
-    background:linear-gradient(180deg,#262C1C,#1B2013);
-    border:1px solid var(--brass-lo);border-radius:4px;
-    box-shadow:inset 0 0 0 1px rgba(0,0,0,.4),inset 0 1px 0 rgba(228,200,126,.16),var(--sh-card);
-    padding:9px 12px;margin-bottom:24px;position:relative;
-  }
-  .topbar::before{content:"";position:absolute;left:8px;right:8px;top:2px;height:1px;
-    background:linear-gradient(90deg,transparent,rgba(228,200,126,.35),transparent)}
-  .brand{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;
-    letter-spacing:2.2px;color:var(--brass-hi);text-transform:uppercase}
-  .brand .star{width:20px;height:20px;flex:none;color:var(--brass);display:flex;align-items:center;justify-content:center}
-  .brand .star svg{width:100%;height:100%}
-  .brand small{display:block;font-size:8.5px;letter-spacing:3px;color:var(--muted);font-weight:600;margin-top:1px}
-  .gh-btn{display:flex;align-items:center;gap:6px;padding:6px 11px;border-radius:3px;
-    font-size:11px;font-weight:700;letter-spacing:1.5px;color:var(--ink2);text-decoration:none;
-    background:rgba(196,162,92,.08);border:1px solid var(--brass-lo);
-    transition:transform .26s var(--ease-spring),color .18s,background .18s,border-color .18s}
-  .gh-btn svg{width:14px;height:14px;color:var(--brass)}
-  @media (hover:hover){
-    .gh-btn:hover{transform:translateY(-3px) scale(1.05);color:var(--brass-hi);background:rgba(196,162,92,.18);border-color:var(--brass)}
-  }
-  @media (hover:none){.gh-btn:active{filter:brightness(.85)}}
-
-  .hero{padding:10px 2px 20px;border-bottom:1px solid var(--sep);margin-bottom:18px}
-  .kick{font-size:11px;font-weight:800;letter-spacing:3.5px;color:var(--brass);text-transform:uppercase;margin-bottom:6px}
-  h1{font-size:33px;font-weight:900;letter-spacing:.5px;line-height:1.15;color:var(--ink)}
-  h1 .am{color:var(--brass-hi);font-weight:900}
-  .sub{margin-top:9px;font-size:13px;color:var(--muted);line-height:1.75;letter-spacing:.3px}
-  .sub b{color:var(--ink2);font-weight:700}
-
-  .cards{display:flex;flex-direction:column;gap:14px}
-  .card{
-    display:flex;align-items:center;gap:15px;
-    background:
-      linear-gradient(180deg,rgba(255,255,255,.35),rgba(0,0,0,0) 30%),
-      var(--card);
-    border:1px solid var(--brass-lo);border-radius:6px;
-    padding:15px 16px 15px 14px;text-decoration:none;color:inherit;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.4),inset 0 0 0 2px rgba(138,111,53,.25),var(--sh-card);
-    position:relative;overflow:hidden;
-    transition:transform .22s var(--ease),box-shadow .22s var(--ease);
-  }
-  .card::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;opacity:0;
-    background:linear-gradient(90deg,transparent,var(--brass),transparent);transition:opacity .22s}
-  .card .no{position:absolute;top:4px;right:9px;font-size:9px;font-weight:800;letter-spacing:1.5px;
-    color:rgba(90,66,33,.42)}
-  .card .art{width:60px;height:60px;flex:none;display:flex;align-items:center;justify-content:center;
-    position:relative;border-radius:50%;
-    box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--brass-lo),inset 0 2px 6px rgba(0,0,0,.35);
-    background:var(--g1,#4C5C58);color:#F4E8C8}
-  .card .art svg{width:28px;height:28px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
-  .card.ww2{--g1:linear-gradient(150deg,#6B4A2E,#3D2A18)}
-  .card.still{--g1:linear-gradient(150deg,#4C5C58,#333F3B)}
-  .card.phy{--g1:linear-gradient(150deg,#6B5640,#4A3A28)}
-  .card.motu{--g1:linear-gradient(150deg,#4A4238,#26221B)}
-  .card.echo{--g1:linear-gradient(150deg,#3A7C6E,#1E4A44)}
-  .card.beat{--g1:linear-gradient(150deg,#6A3D8C,#3A1E52)}
-  .card.light{--g1:linear-gradient(150deg,#3A4E7C,#1E2A46)}
-  .card.vocal{--g1:linear-gradient(150deg,#8C3A5C,#4A1E30)}
-  .card.pong{--g1:linear-gradient(150deg,#3A5C8C,#1E304A)}
-  .card.rewind{--g1:linear-gradient(150deg,#2A3352,#6B3A1E)}
-  .card.pixel{--g1:linear-gradient(150deg,#4C7C3A,#25401E)}
-
-  /* ---- 不成熟待开发区：一条安静的窄入口 ---- */
-  .dev-slot{margin-top:20px}
-  .dev-toggle{
-    width:100%;display:flex;align-items:center;gap:10px;
-    padding:9px 13px;border-radius:4px;cursor:pointer;
-    font-family:inherit;font-size:11px;font-weight:800;letter-spacing:2.2px;
-    color:rgba(154,142,107,.85);text-transform:uppercase;
-    background:linear-gradient(180deg,rgba(196,162,92,.05),rgba(0,0,0,.14));
-    border:1px dashed rgba(138,111,53,.42);
-    transition:color .2s,border-color .2s,background .2s,transform .26s var(--ease-spring);
-  }
-  .dev-toggle .dot{width:6px;height:6px;flex:none;border-radius:50%;
-    background:var(--brass-lo);box-shadow:0 0 6px rgba(196,162,92,.5);
-    transition:background .2s,box-shadow .2s}
-  .dev-toggle .lbl{flex:1;text-align:left}
-  .dev-toggle .cnt{font-size:10px;letter-spacing:1.2px;color:rgba(154,142,107,.6)}
-  .dev-toggle .chev{width:14px;height:14px;flex:none;transition:transform .32s var(--ease)}
-  .dev-toggle.open{color:var(--brass-hi);border-color:rgba(196,162,92,.6);border-style:solid;
-    background:linear-gradient(180deg,rgba(196,162,92,.13),rgba(0,0,0,.16))}
-  .dev-toggle.open .dot{background:var(--brass-hi);box-shadow:0 0 9px rgba(228,200,126,.8)}
-  .dev-toggle.open .chev{transform:rotate(180deg)}
-  .dev-toggle:active{filter:brightness(.9)}
-  @media (hover:hover){
-    .dev-toggle:hover{color:var(--brass-hi);border-color:rgba(196,162,92,.62);background:linear-gradient(180deg,rgba(196,162,92,.11),rgba(0,0,0,.14))}
-  }
-  .dev-note{margin:9px 2px 0;font-size:11.5px;line-height:1.7;color:rgba(154,142,107,.72);letter-spacing:.3px}
-  .dev-note b{color:var(--ink2);font-weight:700}
-  .dev-body{display:none;margin-top:14px;padding-top:14px;border-top:1px dashed rgba(138,111,53,.28)}
-  .dev-body.show{display:block;animation:devIn .42s var(--ease)}
-  @keyframes devIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-  .dev-body .cards{gap:12px}
-  .dev-body .card .art{filter:saturate(.7) brightness(.92)}
-  .dev-body .card .t{font-size:15px}
-  .card .body{flex:1;min-width:0}
-  .card .t{font-size:16.5px;font-weight:800;letter-spacing:.4px;color:var(--card-ink);
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .card .tag{font-size:9.5px;font-weight:800;letter-spacing:1.6px;color:#E8D9AE;
-    background:linear-gradient(180deg,#4A5432,#39411F);padding:3px 8px 2px;border-radius:2px;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 1px 2px rgba(0,0,0,.35);flex:none}
-  .card .d{margin-top:5px;font-size:12.5px;color:rgba(58,46,31,.72);line-height:1.55;letter-spacing:.2px}
-
-  /* 点赞：火漆印胶囊，安静地贴在右缘 */
-  .like{flex:none;display:inline-flex;align-items:center;gap:5px;
-    padding:6px 11px;border-radius:999px;
-    border:1px solid rgba(138,111,53,.38);color:#8A6F35;
-    background:rgba(255,251,240,.35);
-    font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.5px;
-    cursor:pointer;line-height:1;
-    transition:transform .26s var(--ease-spring),background .18s,color .18s,border-color .18s;
-    -webkit-user-select:none;user-select:none}
-  .like svg{width:13px;height:13px}
-  .like .n{min-width:14px;text-align:center;font-variant-numeric:tabular-nums}
-  .like:active{filter:brightness(.85)}
-  .like.pop{animation:likepop .45s var(--ease-spring)}
-  @keyframes likepop{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
-  .like.on{color:var(--liked);border-color:rgba(168,64,47,.55);background:rgba(168,64,47,.07)}
-  .like.on svg{fill:var(--liked)}
-  @media (hover:hover){
-    .card:hover{transform:translateY(-3px) scale(1.012);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),inset 0 0 0 2px rgba(196,162,92,.5),0 16px 34px rgba(0,0,0,.5)}
-    .card:hover::after{opacity:1}
-    .card:hover .like{transform:translateY(-2px) scale(1.06)}
-    .like:hover{color:var(--liked);border-color:var(--liked);background:rgba(168,64,47,.08)}
-  }
-  @media (hover:none){
-    .card:active{filter:brightness(.92)}
-  }
-
-  footer{margin-top:30px;text-align:center;font-size:11.5px;color:var(--muted);letter-spacing:.5px;line-height:2}
-  footer a{color:var(--brass);text-decoration:none;border-bottom:1px solid rgba(196,162,92,.35)}
-  footer a:hover{color:var(--brass-hi)}
-
-  ::-webkit-scrollbar{width:8px}
-  ::-webkit-scrollbar-thumb{background:rgba(196,162,92,.35);border-radius:4px}
+:root{--bg:#050514;--cyan:#00e5ff;--yellow:#ffd54f;--ink:#eafcff;--dim:rgba(150,215,255,.55)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:"Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace;
+     color:#bfefff;user-select:none;-webkit-user-select:none}
+#space{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+       image-rendering:crisp-edges;image-rendering:pixelated;touch-action:none}
+#crt{position:fixed;inset:0;z-index:6;pointer-events:none;
+     background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px)}
+#brand{position:fixed;top:12px;left:16px;z-index:5;font-size:12px;letter-spacing:1px;color:var(--dim);pointer-events:none}
+#brand b{color:var(--yellow);font-weight:normal}
+#sysbar{position:fixed;top:12px;right:16px;z-index:5;display:flex;gap:10px;align-items:center}
+.gh{font-size:12px;letter-spacing:1px;color:var(--cyan);text-decoration:none;
+  border:1px solid rgba(0,229,255,.4);padding:5px 10px;background:rgba(4,8,24,.7)}
+.gh:active{background:rgba(0,229,255,.16)}
+#info{position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:5;
+  text-align:center;pointer-events:none}
+#info .no{font-size:12px;letter-spacing:2px;color:var(--dim)}
+#info .no b{color:var(--yellow);font-weight:normal}
+#info .devtag{display:inline-block;font-size:12px;color:#9fb4d6;border:1px solid rgba(159,180,214,.5);padding:0 5px;margin-left:6px}
+#info h1{font-size:24px;letter-spacing:3px;color:var(--ink);font-weight:normal;margin-top:6px;
+  text-shadow:0 0 8px rgba(0,229,255,.8),0 0 24px rgba(0,229,255,.35)}
+#info .tag{font-size:12px;letter-spacing:2px;color:var(--cyan);margin-top:5px}
+#info .desc{font-size:12px;line-height:1.8;color:#9fd4ef;margin-top:7px;max-width:min(430px,88vw);
+  margin-left:auto;margin-right:auto;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.btnrow{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;pointer-events:auto}
+.enter{display:inline-block;font-family:inherit;font-size:14px;letter-spacing:4px;
+  color:#03121e;background:var(--cyan);border:none;padding:12px 28px;cursor:pointer;
+  text-decoration:none;box-shadow:0 0 18px rgba(0,229,255,.4);min-height:44px;line-height:1.2}
+.enter:active{transform:translateY(2px);box-shadow:0 0 8px rgba(0,229,255,.3)}
+.like{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;letter-spacing:1px;
+  color:#ff8ba0;background:rgba(255,110,140,.06);border:1px solid rgba(255,110,140,.4);
+  padding:11px 13px;cursor:pointer;min-height:44px;box-sizing:border-box}
+.like.on{color:#ff5c7a;border-color:#ff5c7a;background:rgba(255,92,122,.12)}
+.like.pop{animation:likepop .45s ease-out}
+@keyframes likepop{0%{transform:scale(1)}40%{transform:scale(1.16)}100%{transform:scale(1)}}
+#devslot{position:fixed;left:50%;transform:translateX(-50%);z-index:5;width:min(360px,86vw)}
+#devToggle{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:inherit;font-size:12px;letter-spacing:2px;color:rgba(120,190,230,.55);
+  background:rgba(0,229,255,.03);border:1px dashed rgba(0,229,255,.3);
+  padding:8px 10px;cursor:pointer;min-height:36px}
+#devToggle.open{color:var(--cyan);border-style:solid;background:rgba(0,229,255,.08)}
+#devNote{display:none;margin-top:6px;font-size:12px;line-height:1.7;color:rgba(120,190,230,.45);text-align:center}
+#hint{position:fixed;left:0;right:0;bottom:calc(8px + env(safe-area-inset-bottom,0px));z-index:5;
+  font-size:12px;letter-spacing:1px;color:rgba(120,190,230,.4);text-align:center;pointer-events:none}
+.swap{animation:swap .28s ease-out}
+@keyframes swap{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+body.warping #info,body.warping #brand,body.warping #sysbar,body.warping #devslot,body.warping #hint{opacity:0}
+#info,#brand,#sysbar,#devslot,#hint{transition:opacity .3s}
+@media (max-width:640px){
+  #info h1{font-size:20px}
+  #info .desc{-webkit-line-clamp:2}
+}
+@media (orientation:portrait){
+  body{background:linear-gradient(#070a1e,#03040e)}
+  #space{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent);
+         mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent)}
+}
+@media (prefers-reduced-motion:reduce){.swap{animation:none}}
 </style>
 </head>
 <body>
-<div class="grain"></div>
-<div class="wrap">
-  <div class="topbar">
-    <div class="brand">
-      <span class="star"><svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l2.9 6.26 6.6.6-5 4.4 1.5 6.5L12 16.9 5.9 19.8l1.5-6.5-5-4.4 6.6-.6z"/></svg></span>
-      <span>NDSHUGE<small>鼠哥游戏厅</small></span>
-    </div>
-    <a class="gh-btn" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg>
-      GITHUB
-    </a>
+<canvas id="space" width="480" height="270"></canvas>
+<div id="crt"></div>
+<div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARMORY</div>
+<div id="sysbar"><a class="gh" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB</a></div>
+<div id="info">
+  <div class="no"><b id="gNo">No.01</b><span class="devtag" id="gDev" style="display:none">待开发</span></div>
+  <h1 id="gTitle">西线前线</h1>
+  <div class="tag" id="gTag">FPS · 战役</div>
+  <div class="desc" id="gDesc"></div>
+  <div class="btnrow">
+    <button class="like" id="likeBtn" aria-label="点赞">&#9829;<span id="likeN">&middot;</span></button>
+    <a class="enter" id="gEnter" href="./games/ww2-frontline/">进入游戏</a>
   </div>
-
-  <header class="hero">
-    <div class="kick">NDSHUGE ARMORY · EST. 2026</div>
-    <h1>鼠哥<span class="am">军械库</span></h1>
-    <p class="sub">自家产的游戏，朋友随便取用。<br>下面这些是<b>正式装备</b>，玩得爽就点个<b>赞</b>。<b>新装备持续入库</b>。</p>
-  </header>
-
-  <nav class="cards" id="cards"></nav>
-
-  <section class="dev-slot">
-    <button type="button" class="dev-toggle" id="devToggle" aria-expanded="false" aria-controls="devBody">
-      <span class="dot"></span>
-      <span class="lbl">不成熟待开发区</span>
-      <span class="cnt" id="devCnt"></span>
-      <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-    </button>
-    <p class="dev-note">实验品、半成品、手感还在调的东西。点开看看，接受拍砖。</p>
-    <div class="dev-body" id="devBody">
-      <nav class="cards" id="devCards"></nav>
-    </div>
-  </section>
-
-  <footer>
-    <a href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB 仓库</a>
-    &nbsp;·&nbsp; NDSHUGE © 2026
-  </footer>
 </div>
-
+<div id="devslot">
+  <button id="devToggle">&middot; 不成熟待开发区 &middot; <b id="devCnt">4 件</b></button>
+  <div id="devNote">实验品、半成品、手感还在调的东西。点开看看，接受拍砖。</div>
+</div>
+<div id="hint">点行星选中 · 再点一次跃迁进入 · ← → 或滑动切换 · NDSHUGE © 2026</div>
 <script>
-var IC = {
-  medal:'<path d="M7.21 15 2.66 7.14a2 2 0 0 1 .13-2.2L4.4 2.8A2 2 0 0 1 6 2h12a2 2 0 0 1 1.6.8l1.6 2.14a2 2 0 0 1 .14 2.2L16.79 15"/><path d="M11 12 5.12 2.2"/><path d="m13 12 5.88-9.8"/><path d="M8 7h8"/><circle cx="12" cy="17" r="5"/><path d="M12 18v-2h-.5"/>',
-  phy:'<circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.04 2.03-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5Z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.04-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.04 7.36.02 11.9-4.5Z"/>',
-  still:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
-  motu:'<path d="m11 10 3 3"/><path d="M6.5 21A3.5 3.5 0 1 0 3 17.5a2.62 2.62 0 0 1-.708 1.792A1 1 0 0 0 3 21z"/><path d="M9.969 17.031 21.378 5.624a1 1 0 0 0-3.002-3.002L6.967 14.031"/>',
-  echo:'<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
-  beat:'<path d="m2 2 8 8"/><path d="m22 2-8 8"/><ellipse cx="12" cy="9" rx="10" ry="5"/><path d="M7 13.4v7.9"/><path d="M12 14v8"/><path d="M17 13.4v7.9"/><path d="M2 9v8a10 5 0 0 0 20 0V9"/>',
-  light:'<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/>',
-  vocal:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-  pong:'<path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/>',
-  heart:'<path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>',
-  rewind:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.4"/><circle cx="16" cy="12" r="2.4"/><path d="M8 19v2.4"/><path d="M16 19v2.4"/>'
-};
-function svg(inner){
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
-}
-var games = [
-  {no:'No.01', cls:'ww2', t:'西线前线', tag:'FPS · 战役', icon:'medal',
-   d:'沉浸式二战射击。COD 风格 HUD，指挥官无线电实时喊话，突击东进，德语嘶吼就在耳边。', href:'./games/ww2-frontline/', key:'ww2-frontline'},
-  {no:'No.02', cls:'still', t:'凝时 STILL', tag:'弹幕 · 时停', icon:'still',
-   d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。', href:'./games/still/', key:'still'},
-  {no:'No.03', cls:'phy', t:'重力花园', tag:'物理 · 解压', icon:'phy',
-   d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。', href:'./games/gravity-garden/', key:'gravity-garden'},
-  {no:'No.04', cls:'motu', t:'墨途', tag:'水墨 · 平台', icon:'motu',
-   d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。', href:'./games/motu/', key:'motu'},
-  {no:'No.05', cls:'echo', t:'回声小径', tag:'像素 · 回声', icon:'echo',
-   d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。', href:'./games/echo-trail/', key:'echo-trail'},
-  {no:'No.06', cls:'beat', t:'鼓点乒乓', tag:'音游 · 街机', icon:'beat',
-   d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。', href:'./games/beat-paddle/', key:'beat-paddle'},
-  {no:'No.07', cls:'light', t:'慢光 LIGHTLAG', tag:'太空 · 防御', icon:'light', dev:true,
-   d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。', href:'./games/lightlag/', key:'lightlag'},
-  {no:'No.08', cls:'vocal', t:'VOCALON! 节拍革命', tag:'音游 · 原曲', icon:'vocal', dev:true,
-   d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。', href:'./games/vocalon-chaos/', key:'vocalon-chaos'},
-  {no:'No.09', cls:'pong', t:'像素乒乓 CAT vs RAT', tag:'街机 · 对决', icon:'pong', dev:true,
-   d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。', href:'./games/pixel-pong/', key:'pixel-pong'},
-  {no:'No.10', cls:'rewind', t:'回带 REWINDER', tag:'像素 · 时间', icon:'rewind', dev:true,
-   d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。', href:'./games/rewinder/', key:'rewinder'}
+'use strict';
+/* 航线模式：行星排成一线，火箭悬停选中行星下方；切换=火箭飞过去；再点=跃迁进入游戏 */
+var GAMES=[
+  {no:'No.01',t:'西线前线',tag:'FPS · 战役',d:'沉浸式二战射击。COD 风格 HUD，指挥官无线电实时喊话，突击东进，德语嘶吼就在耳边。',href:'./games/ww2-frontline/',key:'ww2-frontline',c:'#8a5a34',g:'#e0b070'},
+  {no:'No.02',t:'凝时 STILL',tag:'弹幕 · 时停',d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。',href:'./games/still/',key:'still',c:'#4a6a6e',g:'#a8e3ff',ring:true},
+  {no:'No.03',t:'重力花园',tag:'物理 · 解压',d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。',href:'./games/gravity-garden/',key:'gravity-garden',c:'#6a8a3a',g:'#d9e08a'},
+  {no:'No.04',t:'墨途',tag:'水墨 · 平台',d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。',href:'./games/motu/',key:'motu',c:'#3a3f4a',g:'#c9d2e8'},
+  {no:'No.05',t:'回声小径',tag:'像素 · 回声',d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。',href:'./games/echo-trail/',key:'echo-trail',c:'#2a7c6e',g:'#8fe8d0'},
+  {no:'No.06',t:'鼓点乒乓',tag:'音游 · 街机',d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。',href:'./games/beat-paddle/',key:'beat-paddle',c:'#6a3d8c',g:'#d9b0ff'},
+  {no:'No.07',t:'慢光 LIGHTLAG',tag:'太空 · 防御',dev:true,d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。',href:'./games/lightlag/',key:'lightlag',c:'#46506b',g:'#9fb4d6',ring:true},
+  {no:'No.08',t:'VOCALON! 节拍革命',tag:'音游 · 原曲',dev:true,d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。',href:'./games/vocalon-chaos/',key:'vocalon-chaos',c:'#6e4a5c',g:'#d0a8b8'},
+  {no:'No.09',t:'像素乒乓 CAT vs RAT',tag:'街机 · 对决',dev:true,d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。',href:'./games/pixel-pong/',key:'pixel-pong',c:'#465a78',g:'#a4b8d6'},
+  {no:'No.10',t:'回带 REWINDER',tag:'像素 · 时间',dev:true,d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。',href:'./games/rewinder/',key:'rewinder',c:'#3a4158',g:'#ccab8a',ring:true}
 ];
+var MAIN=6;
+var REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+var IS_TOUCH=matchMedia('(pointer:coarse)').matches;
+var W=480,H=270,CX=W/2,CY=H/2,TAU=Math.PI*2;
+var cv=document.getElementById('space'),ctx=cv.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+function rnd(a,b){return a+Math.random()*(b-a);}
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
+function lerp(a,b,k){return a+(b-a)*k;}
+function easeIO(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+function shade(hex,f){var n=parseInt(hex.slice(1),16),r=n>>16&255,g=n>>8&255,b=n&255;
+  if(f>=0){r+=(255-r)*f;g+=(255-g)*f;b+=(255-b)*f}else{r*=1+f;g*=1+f;b*=1+f}
+  return 'rgb('+(r|0)+','+(g|0)+','+(b|0)+')';}
+function hexA(hex,a){var n=parseInt(hex.slice(1),16);
+  return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
+function fit(){
+  var portrait=innerHeight>innerWidth;
+  var s=portrait?Math.min(innerWidth/W,innerHeight/H):Math.max(innerWidth/W,innerHeight/H);
+  cv.style.width=Math.ceil(W*s)+'px';cv.style.height=Math.ceil(H*s)+'px';}
+addEventListener('resize',fit);fit();
 
-/* ---- 点赞：Abacus 免费计数 API（CountAPI 血统），localStorage 防重复 ---- */
-var NS = 'ndshuge-game';
-var API = 'https://abacus.jasoncameron.dev';
-function likedKey(k){ return 'ng-like-' + k; }
+/* 航线行星布局：devMode 展开后 10 颗、间距收紧 */
+var devs=[];
+function layout(){
+  devs=[];
+  var n=devMode?GAMES.length:MAIN;
+  var gap=devMode?42:62,x0=CX-(n-1)*gap/2;
+  for(var i=0;i<n;i++){
+    var G=GAMES[devMode?i:i];
+    devs.push({G:G,x:x0+i*gap,y:104,r:devMode?12:16,pulse:0,glowK:0});}
+}
+/* 状态 */
+var cur=0,flying=0,flyFrom=0,flyTo=0;
+var rocket={x:CX,y:160,salute:0,clicks:0,last:0,hop:0,_x:CX,_y:160};
+var warp={active:false,t:0,k:0};
+var flash={active:false,t:0};
+var parts=[],wstars=[];
+for(var wi=0;wi<42;wi++)wstars.push({a:rnd(0,TAU),d:rnd(4,300),sp:rnd(260,620),px:-999,py:-999});
+var gdt=1/60,mouseX=CX,mouseY=CY,mox=0,moy=0,shakeT=0,whitePop=0,flameAcc=0,lastHover=null;
+try{cur=clamp(parseInt(localStorage.getItem('armory_index')||'0',10)||0,0,MAIN-1);}catch(e){}
+var devMode=false;
+try{devMode=localStorage.getItem('ng-dev-open')==='1';}catch(e){}
 
-function renderCount(el, v){
-  el.textContent = v >= 1000 ? (v/1000).toFixed(1).replace(/\.0$/,'') + 'k' : String(v);
-}
-function fetchCount(key, el){
-  try{
-    fetch(API + '/get/' + NS + '/' + key).then(function(r){ return r.json(); }).then(function(j){
-      if (j && typeof j.value === 'number') renderCount(el, j.value);
-    }).catch(function(){});
-  }catch(e){}
-}
-function bindLike(btn, key){
-  var n = btn.querySelector('.n');
-  var isLiked = localStorage.getItem(likedKey(key)) === '1';
-  if (isLiked) btn.classList.add('on');
-  fetchCount(key, n);
-  btn.addEventListener('click', function(e){
-    e.preventDefault(); e.stopPropagation();
-    if (localStorage.getItem(likedKey(key)) === '1') return;
-    localStorage.setItem(likedKey(key), '1');
-    btn.classList.add('on','pop');
-    setTimeout(function(){ btn.classList.remove('pop'); }, 500);
-    var cur = parseInt(n.textContent, 10); if (isNaN(cur)) cur = 0;
-    renderCount(n, cur + 1);
-    try{
-      fetch(API + '/hit/' + NS + '/' + key).then(function(r){ return r.json(); }).then(function(j){
-        if (j && typeof j.value === 'number') renderCount(n, j.value);
-      }).catch(function(){});
-    }catch(e){}
-  });
-}
+/* 静态渐变 */
+var bgGrad=ctx.createLinearGradient(0,0,0,H);
+bgGrad.addColorStop(0,'#070a1e');bgGrad.addColorStop(1,'#03040e');
+var nebula=[[110,85,150,'rgba(0,110,150,.10)'],[360,180,130,'rgba(96,44,150,.10)'],[300,55,90,'rgba(130,100,30,.06)']]
+  .map(function(q){var g=ctx.createRadialGradient(q[0],q[1],0,q[0],q[1],q[2]);
+    g.addColorStop(0,q[3]);g.addColorStop(1,'rgba(0,0,0,0)');return g;});
+var vign=ctx.createRadialGradient(CX,CY,90,CX,CY,310);
+vign.addColorStop(0,'rgba(0,0,0,0)');vign.addColorStop(1,'rgba(0,0,14,.5)');
+/* 星空 */
+var stars=[];
+for(var si=0;si<110;si++)stars.push({a:rnd(0,TAU),d:rnd(2,300),tw:rnd(.8,2.6),ph:rnd(0,TAU),
+  par:rnd(.3,1),s:Math.random()<.85?1:2,
+  c:Math.random()<.68?'#ffffff':(Math.random()<.5?'#00e5ff':'#ffd54f')});
+var band=[];
+for(var bi=0;bi<70;bi++){
+  var u=rnd(-20,W+20),v=CY+Math.sin(-.28)*(u-CX)+rnd(-34,34);
+  band.push({x:u,y:v,a:rnd(.12,.4)});}
+var brights=[];
+for(var ti=0;ti<6;ti++)brights.push({x:rnd(20,W-20),y:rnd(24,H-70),ph:rnd(0,TAU)});
 
-function makeCard(g){
-  var a = document.createElement('a');
-  a.className = 'card ' + g.cls;
-  a.href = g.href; a.target = '_blank'; a.rel = 'noopener';
-  a.innerHTML =
-    '<span class="no">'+g.no+'</span>'+
-    '<span class="art">'+svg(IC[g.icon])+'</span>'+
-    '<span class="body"><span class="t">'+g.t+'<span class="tag">'+g.tag+'</span></span>'+
-    '<span class="d">'+g.d+'</span></span>'+
-    '<button type="button" class="like" aria-label="点赞">'+svg(IC.heart)+'<span class="n"></span></button>';
-  bindLike(a.querySelector('.like'), g.key);
-  return a;
-}
+/* 音效 */
+var actx=null,master=null;
+function audio(){if(actx)return;
+  try{actx=new (window.AudioContext||window.webkitAudioContext)();
+    master=actx.createGain();master.gain.value=1;master.connect(actx.destination);}catch(e){}}
+function tone(type,f0,f1,dur,peak,delay){if(!actx)return;
+  var t=actx.currentTime+(delay||0);
+  var o=actx.createOscillator(),g=actx.createGain();o.type=type;
+  o.frequency.setValueAtTime(f0,t);
+  if(f1&&f1!==f0)o.frequency.exponentialRampToValueAtTime(Math.max(30,f1),t+dur);
+  g.gain.setValueAtTime(0.0001,t);g.gain.linearRampToValueAtTime(peak,t+.005);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  o.connect(g);g.connect(master);o.start(t);o.stop(t+dur+.05);}
+function tick(){tone('square',700,980,.06,.08);}
+function whoosh(){tone('sawtooth',180,520,.4,.1);tone('square',90,260,.4,.06);}
 
-var cards = document.getElementById('cards');
-var devCards = document.getElementById('devCards');
-games.forEach(function(g){
-  (g.dev ? devCards : cards).appendChild(makeCard(g));
+/* 信息区 / 点赞 */
+function $(id){return document.getElementById(id);}
+var infoEl=$('info');
+var NS='ndshuge-game',API='https://abacus.jasoncameron.dev';
+function likedKey(k){return 'ng-like-'+k;}
+function renderCount(el,v){el.textContent=v>=1000?(v/1000).toFixed(1).replace(/\.0$/,'')+'k':String(v);}
+function bindLike(key){
+  var n=$('likeN'),on=false;
+  try{on=localStorage.getItem(likedKey(key))==='1';}catch(e){}
+  $('likeBtn').classList.toggle('on',on);
+  n.textContent='\u00b7';
+  try{fetch(API+'/get/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
+    if(j&&typeof j.value==='number')renderCount(n,j.value);}).catch(function(){});}catch(e){}
+}
+$('likeBtn').addEventListener('click',function(){
+  var key=devs[cur].G.key,was=false;
+  try{was=localStorage.getItem(likedKey(key))==='1';}catch(e){}
+  if(was)return;
+  try{localStorage.setItem(likedKey(key),'1');}catch(e){}
+  var btn=$('likeBtn');btn.classList.add('on','pop');
+  setTimeout(function(){btn.classList.remove('pop');},500);
+  var n=$('likeN'),c2=parseInt(n.textContent,10);if(isNaN(c2))c2=0;
+  renderCount(n,c2+1);
+  try{fetch(API+'/hit/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
+    if(j&&typeof j.value==='number')renderCount(n,j.value);}).catch(function(){});}catch(e){}
+});
+function renderInfo(){
+  var G=devs[cur].G;
+  $('gNo').textContent=G.no;
+  $('gDev').style.display=G.dev?'inline-block':'none';
+  $('gTitle').textContent=G.t;
+  $('gTag').textContent=G.tag;
+  $('gDesc').textContent=G.d;
+  $('gEnter').href=G.href;
+  bindLike(G.key);
+  infoEl.classList.remove('swap');void infoEl.offsetWidth;infoEl.classList.add('swap');
+}
+/* 选中与飞行 */
+function move(i,dir){
+  i=clamp(i,0,devs.length-1);
+  if(i===cur||warp.active)return;
+  cur=i;flying=1;flyFrom=rocket._x;flyTo=devs[cur].x;
+  try{localStorage.setItem('armory_index',String(cur));}catch(e){}
+  whoosh();renderInfo();
+}
+function applyDev(){
+  $('devToggle').classList.toggle('open',devMode);
+  $('devNote').style.display=devMode?'block':'none';
+  layout();
+  cur=clamp(cur,0,devs.length-1);
+  rocket.x=devs[cur].x;rocket._x=rocket.x;
+  flying=0;renderInfo();
+  try{localStorage.setItem('ng-dev-open',devMode?'1':'0');}catch(e){}
+}
+$('devToggle').addEventListener('click',function(){audio();devMode=!devMode;applyDev();});
+/* 跃迁进入 */
+function launchWarp(){
+  if(warp.active)return;
+  var u=devs[cur].G.href;
+  if(REDUCED){location.href=u;return;}
+  warp.active=true;warp.t=0;warp.k=0;
+  document.body.classList.add('warping');
+  tone('sawtooth',110,880,1.0,.14);tone('square',55,440,1.0,.08);
+}
+$('gEnter').addEventListener('click',function(e){
+  if(warp.active)return;
+  if(REDUCED)return;             /* 直接跟随链接 */
+  e.preventDefault();launchWarp();
 });
 
-/* ---- 不成熟待开发区：默认收起，展开状态本地记住 ---- */
-var DEV_KEY = 'ng-dev-open';
-var devToggle = document.getElementById('devToggle');
-var devBody = document.getElementById('devBody');
-var devCnt = document.getElementById('devCnt');
-var devN = games.filter(function(g){ return g.dev; }).length;
-devCnt.textContent = devN + ' 件';
-var devOpen = false;
-try{ devOpen = localStorage.getItem(DEV_KEY) === '1'; }catch(e){}
-function applyDev(open){
-  devBody.classList.toggle('show', open);
-  devToggle.classList.toggle('open', open);
-  devToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-applyDev(devOpen);
-devToggle.addEventListener('click', function(){
-  devOpen = !devOpen;
-  applyDev(devOpen);
-  try{ localStorage.setItem(DEV_KEY, devOpen ? '1' : '0'); }catch(e){}
+/* 输入 */
+function toGame(e){var r=cv.getBoundingClientRect();
+  return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height];}
+cv.addEventListener('pointermove',function(e){var p=toGame(e);mouseX=p[0];mouseY=p[1];});
+var sx0=null;
+cv.addEventListener('pointerdown',function(e){
+  audio();
+  var m=toGame(e),mx=m[0],my=m[1];mouseX=mx;mouseY=my;sx0=mx;
+  if(warp.active)return;
+  /* 点火箭：彩蛋计数 */
+  if(Math.abs(mx-rocket._x)<16&&my>rocket._y-24&&my<rocket._y+12){
+    var now=performance.now();
+    if(now-rocket.last>1600)rocket.clicks=0;
+    rocket.last=now;rocket.hop=1;
+    if(++rocket.clicks>=5){rocket.clicks=0;boom();}
+    return;}
+  /* 最近行星 */
+  var best=-1,bd=1e9;
+  for(var i=0;i<devs.length;i++){
+    var d2=(mx-devs[i].x)*(mx-devs[i].x)+(my-devs[i].y)*(my-devs[i].y);
+    if(d2<bd){bd=d2;best=i;}}
+  var hitR=IS_TOUCH?30:24;
+  if(best>=0&&bd<=hitR*hitR){
+    if(best===cur&&!flying){launchWarp();}
+    else{tick();move(best,best>cur?1:-1);}}
 });
+cv.addEventListener('pointerup',function(e){
+  if(sx0===null)return;
+  var m=toGame(e),dx=m[0]-sx0;sx0=null;
+  if(Math.abs(dx)>40&&!warp.active){tick();move(cur+(dx<0?1:-1),dx<0?1:-1);}
+});
+addEventListener('keydown',function(e){
+  audio();
+  if(e.key==='ArrowLeft'){tick();move(cur-1,-1);}
+  else if(e.key==='ArrowRight'){tick();move(cur+1,1);}
+  else if(e.key==='Enter')launchWarp();});
+function boom(){rocket.salute=2.4;shakeT=REDUCED?0:.6;whitePop=REDUCED?0:.12;tone('sine',180,40,.45,.35);
+  for(var i=0;i<80;i++){var a=rnd(0,TAU),sp=rnd(18,90);
+    parts.push({x:rocket._x,y:rocket._y-8,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-12,
+      age:0,life:rnd(.5,1.2),s:Math.random()<.5?1:2,
+      c:['#ffffff','#00e5ff','#ffd54f','#ff5c8a','#69f0ae'][Math.random()*5|0]});}}
+
+function update(dt,t){
+  gdt=dt;
+  mox+=(clamp((mouseX-CX)*.05,-9,9)-mox)*Math.min(1,dt*6);
+  moy+=(clamp((mouseY-CY)*.04,-7,7)-moy)*Math.min(1,dt*6);
+  if(REDUCED){mox=0;moy=0;}
+  rocket.hop=Math.max(0,rocket.hop-dt*2.4);
+  /* 火箭飞行：缓动滑向选中行星 */
+  var tx=devs[cur].x,ty=devs[cur].y+56;
+  if(flying>0){
+    flying=Math.max(0,flying-dt/0.55);
+    var k=1-flying;
+    rocket.x=lerp(flyFrom,flyTo,easeIO(k));
+    if(flying===0){devs[cur].pulse=1;}}
+  else rocket.x+=(tx-rocket.x)*Math.min(1,dt*5);
+  rocket.y=ty+(REDUCED?0:Math.sin(t*2.1)*1.6);
+  devs[cur].pulse=Math.max(0,(devs[cur].pulse||0)-dt*2.5);
+  for(var i=0;i<devs.length;i++){var p=devs[i];
+    p.glowK+=(((i===cur)?1:0)-p.glowK)*Math.min(1,dt*8);}
+  /* 跃迁 */
+  if(warp.active){warp.t=Math.min(1,warp.t+dt/0.95);
+    warp.k=warp.t*warp.t;
+    var tp=devs[cur];
+    if(!flash.active&&tp.r*(1+warp.k*26)>=330){flash.active=true;flash.t=.15;}}
+  if(flash.active){flash.t-=dt;
+    if(flash.t<=0){flash.active=false;location.href=devs[cur].G.href;return;}}
+  if(warp.active&&!REDUCED){for(var w2=0;w2<wstars.length;w2++){var ws=wstars[w2];
+    ws.d+=ws.sp*gdt*(1+warp.k*2.5);
+    if(ws.d>320){ws.d=rnd(2,14);ws.a=rnd(0,TAU);ws.px=-999;ws.py=-999;}}}
+  /* 尾焰：飞行与跃迁时更猛 */
+  var mv=Math.abs(rocket.x-((rocket.px===undefined)?rocket.x:rocket.px));
+  rocket.px=rocket.x;
+  var fb=(warp.active?6+warp.k*8:(flying>0?5:1.2));
+  flameAcc+=dt*26*fb;
+  while(flameAcc>=1){flameAcc--;
+    if(parts.length<420)parts.push({x:rocket.x+rnd(-2,2),y:rocket.y+9,
+      vx:rnd(-6,6)-clamp((tx-rocket.x)*.06,-9,9),
+      vy:rnd(26,46)+(warp.active?18:0),age:0,life:rnd(.2,.45),
+      s:Math.random()<.35?2:1,
+      c:Math.random()<.45?'#ffd54f':(Math.random()<.6?'#ffffff':'#ff4757')});}
+  for(var pi=parts.length-1;pi>=0;pi--){var q=parts[pi];
+    q.age+=dt;if(q.age>=q.life){parts.splice(pi,1);continue;}
+    q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=1-1.4*dt;q.vy*=1-1.4*dt;}
+  rocket.salute=Math.max(0,rocket.salute-dt);
+  shakeT=Math.max(0,shakeT-dt);whitePop=Math.max(0,whitePop-dt);
+}
+
+function drawStars(t){
+  for(var i=0;i<stars.length;i++){var s=stars[i];
+    var x=CX+Math.cos(s.a)*s.d+mox*s.par,y=CY+Math.sin(s.a)*s.d*.78+moy*s.par;
+    var a=REDUCED?.6:(.3+.7*Math.pow(Math.sin(t*s.tw+s.ph)*.5+.5,2));
+    x=((x%W)+W)%W;y=((y%H)+H)%H;
+    ctx.globalAlpha=a;ctx.fillStyle=s.c;
+    ctx.fillRect(x|0,y|0,s.s,s.s);}
+  ctx.globalAlpha=1;
+}
+function drawPlanetCard(p,i,t){
+  var G=p.G;
+  var sel=i===cur;
+  var pulse=p.pulse||0;
+  var r=p.r*(1+(sel?.14:0)+.12*pulse)*(1+.06*p.glowK);
+  var x=(p.x+mox*.35)|0,y=(p.y+moy*.3+(REDUCED?0:Math.sin(t*.9+i)*1.8))|0;
+  var breath=.5+.5*Math.sin(t*2.2+i);
+  var gk=sel?(.6+.4*p.glowK):p.glowK*.5;
+  /* 大气辉光 */
+  var L=[[2,.12],[5,.06],[9,.035]];
+  for(var li=0;li<L.length;li++){
+    ctx.globalAlpha=L[li][1]*(.7+.5*breath)*(.35+.65*gk*2);
+    ctx.strokeStyle=G.g;ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(x,y,r+L[li][0],0,TAU);ctx.stroke();}
+  /* 球体 */
+  ctx.globalAlpha=1;
+  var g=ctx.createRadialGradient(x-r*.38,y-r*.42,r*.1,x,y,r*1.02);
+  g.addColorStop(0,shade(G.c,.5));
+  g.addColorStop(.52,G.c);
+  g.addColorStop(1,shade(G.c,-.55));
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+  /* 高光 */
+  ctx.fillStyle='rgba(255,255,255,'+(.38+.15*gk)+')';
+  ctx.beginPath();ctx.ellipse(x-r*.42,y-r*.45,r*.16,r*.1,-.6,0,TAU);ctx.fill();
+  /* 暗面 */
+  var sh2=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.3,x,y,r*1.25);
+  sh2.addColorStop(0,'rgba(0,0,12,0)');sh2.addColorStop(1,'rgba(0,0,12,.55)');
+  ctx.fillStyle=sh2;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+  /* 环 */
+  if(G.ring){
+    var rx=r*1.5,ry=r*.42,tl=-.22;
+    ctx.lineWidth=2;
+    ctx.strokeStyle=hexA(G.g,.5);
+    ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,Math.PI,TAU);ctx.stroke();
+    ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,0,Math.PI);ctx.stroke();}
+  /* 选中行星的编号标签 */
+  if(sel&&!warp.active){
+    ctx.globalAlpha=.85;ctx.fillStyle='#eafcff';
+    ctx.font='12px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+    ctx.textAlign='center';
+    ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,x+1,y+r+12);
+    ctx.fillStyle='#eafcff';ctx.fillText(G.t,x,y+r+11);
+    ctx.textAlign='left';}
+  ctx.globalAlpha=1;
+}
+function drawRocket(t){
+  var bob=REDUCED?0:Math.sin(t*2.1)*1.6;
+  var jit=warp.active?rnd(-.8,.8):0;
+  var hopY=rocket.hop>0?-Math.sin((1-rocket.hop)*Math.PI)*3.2:0;
+  var x=(rocket.x+jit)|0,y=(rocket.y+bob+hopY+jit*.5)|0;
+  rocket._x=x;rocket._y=y;
+  /* 尾巴 */
+  ctx.strokeStyle='rgba(207,216,220,.85)';ctx.lineWidth=1;
+  var tw=Math.sin(t*3.2)*2;
+  ctx.beginPath();ctx.moveTo(x+6,y-1);ctx.quadraticCurveTo(x+13+tw,y+3,x+11+tw*.6,y+9);ctx.stroke();
+  /* 尾焰核心 */
+  var fl=6+Math.sin(t*31)*1.5+(flying>0?5:0)+(warp.active?7:0);
+  ctx.fillStyle='#ffd54f';ctx.fillRect(x-2,y+6,4,3);
+  ctx.fillStyle='rgba(255,213,79,.55)';ctx.fillRect(x-1,y+9,2,fl|0);
+  ctx.fillStyle='#ffffff';ctx.fillRect(x-1,y+6,2,2);
+  /* 鳍 */
+  ctx.fillStyle='#ff4757';ctx.fillRect(x-8,y-3,3,9);ctx.fillRect(x+5,y-3,3,9);
+  /* 机身 */
+  ctx.fillStyle='#cfd8dc';ctx.fillRect(x-5,y-14,10,18);
+  ctx.fillStyle='#ffffff';ctx.fillRect(x+1,y-14,2,18);
+  ctx.fillStyle='rgba(10,25,60,.25)';ctx.fillRect(x-5,y-14,2,18);
+  /* 鼻锥 */
+  ctx.fillStyle='#ff4757';
+  ctx.fillRect(x-1,y-18,2,2);ctx.fillRect(x-3,y-16,6,2);ctx.fillRect(x-5,y-14,10,2);
+  ctx.fillRect(x-5,y+1,10,2);
+  /* 喷口 */
+  ctx.fillStyle='rgba(10,25,60,.55)';ctx.fillRect(x-3,y+4,6,3);
+  /* 舷窗老鼠宇航员 */
+  var look=Math.sin(t*.55)*.9;
+  var blink=(t%3.4)<.14;
+  var wx=x+look,wy=y-7;
+  ctx.fillStyle='#08122e';ctx.beginPath();ctx.arc(wx,wy,4.5,0,TAU);ctx.fill();
+  ctx.fillStyle='#cfd8dc';ctx.beginPath();ctx.arc(wx,wy+1.2,2.6,0,TAU);ctx.fill();
+  ctx.beginPath();ctx.arc(wx-1.7,wy-1,1.2,0,TAU);ctx.arc(wx+1.7,wy-1,1.2,0,TAU);ctx.fill();
+  ctx.fillStyle='#ff9ec4';
+  ctx.beginPath();ctx.arc(wx-1.7,wy-1,.6,0,TAU);ctx.arc(wx+1.7,wy-1,.6,0,TAU);ctx.fill();
+  ctx.fillStyle='#08122e';
+  if(blink)ctx.fillRect((wx-1.5)|0,(wy+.7)|0,3,1);
+  else{ctx.fillRect((wx-1.5)|0,(wy+.6)|0,1,1);ctx.fillRect((wx+.6)|0,(wy+.6)|0,1,1);}
+  ctx.strokeStyle='#00e5ff';ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(wx,wy,4.5,0,TAU);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(wx-3,wy-3,1,1);
+  /* 敬礼彩蛋 */
+  if(rocket.salute>0){ctx.fillStyle='#cfd8dc';ctx.fillRect(x+5,y-16,2,7);
+    ctx.fillStyle='#ffffff';ctx.fillRect(x+5,y-18,2,2);
+    var tw2=Math.sin(t*12)*.5+.5;
+    ctx.globalAlpha=.35+.65*tw2;ctx.fillStyle='#ffd54f';
+    ctx.fillRect(x-5,y-26,1,1);ctx.fillRect(x+5,y-24,1,1);ctx.globalAlpha=1;}
+}
+function drawParts(){
+  for(var i=0;i<parts.length;i++){var q=parts[i];var a=1-q.age/q.life;
+    ctx.globalAlpha=a;ctx.fillStyle=q.c;
+    var s=Math.max(1,(q.s*(0.6+a*0.4))|0);
+    ctx.fillRect(q.x|0,q.y|0,s,s);}
+  ctx.globalAlpha=1;
+}
+function drawTunnel(){
+  for(var i=0;i<wstars.length;i++){var ws=wstars[i];
+    var x=CX+Math.cos(ws.a)*ws.d,y=CY+Math.sin(ws.a)*ws.d*.78;
+    var dx=x-ws.px,dy=y-ws.py;
+    ctx.globalAlpha=.7;ctx.strokeStyle=i%3?'#ffffff':'#00e5ff';ctx.lineWidth=1;
+    if(dx*dx+dy*dy>4){ctx.beginPath();ctx.moveTo(ws.px,ws.py);ctx.lineTo(x,y);ctx.stroke();}
+    else ctx.fillRect(x|0,y|0,1,1);
+    ws.px=x;ws.py=y;}
+  ctx.globalAlpha=1;
+}
+function render(t){
+  ctx.setTransform(1,0,0,1,0,0);
+  if(shakeT>0)ctx.translate(rnd(-3,3)*shakeT*2,rnd(-3,3)*shakeT*2);
+  ctx.fillStyle=bgGrad;ctx.fillRect(-8,-8,W+16,H+16);
+  for(var i=0;i<nebula.length;i++){ctx.fillStyle=nebula[i];ctx.fillRect(0,0,W,H);}
+  ctx.save();ctx.translate(CX,CY);ctx.rotate(-.28);
+  var mg=ctx.createRadialGradient(0,0,10,0,0,240);
+  mg.addColorStop(0,'rgba(140,170,255,.05)');mg.addColorStop(1,'rgba(140,170,255,0)');
+  ctx.fillStyle=mg;ctx.fillRect(-260,-52,520,104);ctx.restore();
+  drawStars(t);
+  /* 银河带星 */
+  for(var b2=0;b2<band.length;b2++){var bn=band[b2];
+    ctx.globalAlpha=bn.a*(REDUCED?.8:(.7+.3*Math.sin(t*.8+b2)));
+    ctx.fillStyle='#cfd8ff';ctx.fillRect((bn.x+mox*.15)|0,(bn.y+moy*.1)|0,1,1);}
+  ctx.globalAlpha=1;
+  /* 亮星十字 */
+  for(var b3=0;b3<brights.length;b3++){var br=brights[b3];
+    var tw3=REDUCED?.6:(.5+.5*Math.sin(t*1.6+br.ph));
+    var bx=(br.x+mox*.2)|0,by=(br.y+moy*.15)|0;
+    ctx.globalAlpha=.5+.4*tw3;ctx.fillStyle='#ffffff';
+    ctx.fillRect(bx-1,by-1,2,2);
+    ctx.globalAlpha=.3*tw3;
+    ctx.fillRect(bx-4,by,3,1);ctx.fillRect(bx+2,by,3,1);
+    ctx.fillRect(bx,by-4,1,3);ctx.fillRect(bx,by+2,1,3);}
+  ctx.globalAlpha=1;
+  if(warp.active)drawTunnel();
+  /* 行星：先画非选中，最后画选中（放大置顶） */
+  for(var pi=0;pi<devs.length;pi++)if(pi!==cur)drawPlanetCard(devs[pi],pi,t);
+  drawPlanetCard(devs[cur],cur,t);
+  drawRocket(t);
+  drawParts();
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle=vign;ctx.fillRect(0,0,W,H);
+  if(whitePop>0){ctx.fillStyle='rgba(255,255,255,'+(whitePop/.12*.5)+')';ctx.fillRect(0,0,W,H);}
+  if(warp.active){
+    var cg=ctx.createRadialGradient(CX,CY,0,CX,CY,90+warp.k*70);
+    cg.addColorStop(0,'rgba(200,245,255,'+(.12+.45*warp.k)+')');
+    cg.addColorStop(1,'rgba(200,245,255,0)');
+    ctx.fillStyle=cg;ctx.fillRect(0,0,W,H);}
+  if(flash.active){var fa=clamp(flash.t/.15,0,1);
+    ctx.fillStyle='rgba(250,252,255,'+(.96*fa)+')';ctx.fillRect(0,0,W,H);}
+}
+applyDev();
+if(IS_TOUCH)$('hint').textContent='点行星选中 · 再点一次跃迁进入 · 左右滑动切换 · NDSHUGE © 2026';
+var last=performance.now();
+function frame(now){
+  var dt=clamp((now-last)/1000,0,.05);last=now;
+  update(dt,now/1000);render(now/1000);requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
