@@ -17,6 +17,10 @@
 | 慢光 LIGHTLAG | `games/lightlag/` | 太空 · 防御 |
 | VOCALON! 节拍革命 | `games/vocalon-chaos/` | 音游 · 原曲 |
 | 像素乒乓 CAT vs RAT | `games/pixel-pong/` | 街机 · 对决 |
+| 回带 REWINDER | `games/rewinder/` | 像素 · 时间 |
+| 拾色 HUEBOUND | `games/shise/` | 射击 · 涂色 |
+| 一闪 · 像素居合斩 | `games/issen/` | 动作 · 居合 |
+| 残光斩 GHOSTSLASH | `games/ghostslash/` | 动作 · 闪斩 |
 
 ## 怎么添加新游戏
 

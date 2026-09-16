@@ -118,7 +118,10 @@ var GAMES=[
   {no:'No.07',t:'慢光 LIGHTLAG',tag:'太空 · 防御',dev:true,d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。',href:'./games/lightlag/',key:'lightlag',c:'#46506b',g:'#9fb4d6',ring:true},
   {no:'No.08',t:'VOCALON! 节拍革命',tag:'音游 · 原曲',dev:true,d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。',href:'./games/vocalon-chaos/',key:'vocalon-chaos',c:'#6e4a5c',g:'#d0a8b8'},
   {no:'No.09',t:'像素乒乓 CAT vs RAT',tag:'街机 · 对决',dev:true,d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。',href:'./games/pixel-pong/',key:'pixel-pong',c:'#465a78',g:'#a4b8d6'},
-  {no:'No.10',t:'回带 REWINDER',tag:'像素 · 时间',dev:true,d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。',href:'./games/rewinder/',key:'rewinder',c:'#3a4158',g:'#ccab8a',ring:true}
+  {no:'No.10',t:'回带 REWINDER',tag:'像素 · 时间',dev:true,d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。',href:'./games/rewinder/',key:'rewinder',c:'#3a4158',g:'#ccab8a',ring:true},
+  {no:'No.11',t:'拾色 HUEBOUND',tag:'射击 · 涂色',d:'世界被灰烬褪色，你泼墨夺回颜色。红穿透反弹、黄电弧跳三、蓝冰冻碎冰，三色切换打回一整片色谱。',href:'./games/shise/',key:'shise',c:'#5a2a6a',g:'#e0a0ff'},
+  {no:'No.12',t:'一闪 · 像素居合斩',tag:'动作 · 居合',d:'敌人踏进白线的一瞬拔刀。完美判定慢镜头一刀两断，挥空就是 0.38 秒硬直破绽。',href:'./games/issen/',key:'issen',c:'#7a2430',g:'#ff9aa8'},
+  {no:'No.13',t:'残光斩 GHOSTSLASH',tag:'动作 · 闪斩',d:'朝鼠标方向闪斩，刀出鞘的一瞬世界凝滞。连斩越多，慢镜头越深。',href:'./games/ghostslash/',key:'ghostslash',c:'#203c46',g:'#7fe0e8',ring:true}
 ];
 var MAIN=6;
 var REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -141,8 +144,8 @@ function fit(){
 addEventListener('resize',fit);fit();
 
 /* 行星轨道分配：三圈椭圆，内快外慢，初始相位按圈内序号均匀铺开 */
-var ORBR=[64,98,132],ORBP=[.11,.075,.05],SPOTY=SY-2;
-var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:12,pulse:0};});
+var ORBR=[70,110,150],ORBP=[.11,.075,.05],SPOTY=SY-2;
+var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[11,12.5,14][i%3],pulse:0};});
 (function(){
   for(var o=0;o<3;o++){
     var m=planets.filter(function(p){return p.orbit===o;});
@@ -325,14 +328,14 @@ function update(dt,t){
     p.pulse=Math.max(0,p.pulse-dt*2.5);}
   /* 火箭：外圈轨道巡航，永远在飞 */
   rocket.a+=.2*gdt*(REDUCED?.3:1)*(warp.active?2.5:1);
-  rocket.x=CX+Math.cos(rocket.a)*168;
-  rocket.y=SPOTY+Math.sin(rocket.a)*72;
+  rocket.x=CX+Math.cos(rocket.a)*172;
+  rocket.y=SPOTY+Math.sin(rocket.a)*58;
   /* 跃迁 */
   if(warp.active){warp.t=Math.min(1,warp.t+dt/0.95);
     warp.k=warp.t*warp.t;
     var tp=planets[warp.i];
     var rr=tp.r*(1+warp.k*26);
-    if(!flash.active&&rr>=330){flash.active=true;flash.t=.5;}}
+    if(!flash.active&&rr>=300){flash.active=true;flash.t=.8;}}
   if(flash.active){flash.t-=dt;
     if(flash.t<=0){flash.active=false;location.href=GAMES[warp.i].href;return;}}
   if(warp.active&&!REDUCED){for(var w2=0;w2<wstars.length;w2++){var ws=wstars[w2];
