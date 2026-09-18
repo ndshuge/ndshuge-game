@@ -62,20 +62,20 @@ window.addEventListener('error',function(ev){
 /* 游戏星系：中心恒星=鼠哥游戏厅，游戏=绕轨道行星（常显名字）。
    点任意行星直接跃迁进入该游戏；←→/滑动切换选中浏览。 */
 var GAMES=[
-  {no:'No.01',t:'西线前线',tag:'FPS · 战役',d:'沉浸式二战射击。COD 风格 HUD，指挥官无线电实时喊话，突击东进，德语嘶吼就在耳边。',href:'./games/ww2-frontline/',key:'ww2-frontline',c:'#8a5a34',g:'#e0b070'},
-  {no:'No.02',t:'凝时 STILL',tag:'弹幕 · 时停',d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。',href:'./games/still/',key:'still',c:'#4a6a6e',g:'#a8e3ff',ring:true},
-  {no:'No.03',t:'重力花园',tag:'物理 · 解压',d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。',href:'./games/gravity-garden/',key:'gravity-garden',c:'#6a8a3a',g:'#d9e08a'},
-  {no:'No.04',t:'墨途',tag:'水墨 · 平台',d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。',href:'./games/motu/',key:'motu',c:'#3a3f4a',g:'#c9d2e8'},
-  {no:'No.05',t:'回声小径',tag:'像素 · 回声',d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。',href:'./games/echo-trail/',key:'echo-trail',c:'#2a7c6e',g:'#8fe8d0'},
-  {no:'No.06',t:'鼓点乒乓',tag:'音游 · 街机',d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。',href:'./games/beat-paddle/',key:'beat-paddle',c:'#6a3d8c',g:'#d9b0ff'},
-  {no:'No.07',t:'慢光 LIGHTLAG',tag:'太空 · 防御',dev:true,d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。',href:'./games/lightlag/',key:'lightlag',c:'#46506b',g:'#9fb4d6',ring:true},
-  {no:'No.08',t:'VOCALON! 节拍革命',tag:'音游 · 原曲',dev:true,d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。',href:'./games/vocalon-chaos/',key:'vocalon-chaos',c:'#6e4a5c',g:'#d0a8b8'},
-  {no:'No.09',t:'像素乒乓 CAT vs RAT',tag:'街机 · 对决',dev:true,d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。',href:'./games/pixel-pong/',key:'pixel-pong',c:'#465a78',g:'#a4b8d6'},
-  {no:'No.10',t:'回带 REWINDER',tag:'像素 · 时间',dev:true,d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。',href:'./games/rewinder/',key:'rewinder',c:'#3a4158',g:'#ccab8a',ring:true},
-  {no:'No.11',t:'拾色 HUEBOUND',tag:'射击 · 涂色',d:'世界被灰烬褪色，你泼墨夺回颜色。红穿透反弹、黄电弧跳三、蓝冰冻碎冰，三色切换打回一整片色谱。',href:'./games/shise/',key:'shise',c:'#5a2a6a',g:'#e0a0ff'},
-  {no:'No.12',t:'一闪 · 像素居合斩',tag:'动作 · 居合',d:'敌人踏进白线的一瞬拔刀。完美判定慢镜头一刀两断，挥空就是 0.38 秒硬直破绽。',href:'./games/issen/',key:'issen',c:'#7a2430',g:'#ff9aa8'},
-  {no:'No.13',t:'残光斩 GHOSTSLASH',tag:'动作 · 闪斩',d:'朝鼠标方向闪斩，刀出鞘的一瞬世界凝滞。连斩越多，慢镜头越深。',href:'./games/ghostslash/',key:'ghostslash',c:'#203c46',g:'#7fe0e8',ring:true},
-  {no:'No.14',t:'光核围城 LUMEN SIEGE',tag:'像素 · 生存',d:'俯视角像素生存。一盏灯对抗十种蚀影，每次升级三选一，每条枪线都能滚成自己的打法。撑得越久，它们越强。',href:'./games/lumen-siege/',key:'lumen-siege',c:'#1e4a58',g:'#9fe8ff',ring:true}
+  {no:'No.01',t:'西线前线',tag:'FPS · 战役',d:'沉浸式二战射击。COD 风格 HUD，指挥官无线电实时喊话，突击东进，德语嘶吼就在耳边。',href:'./games/ww2-frontline/',key:'ww2-frontline',short:'西线前线',c:'#8a5a34',g:'#e0b070'},
+  {no:'No.02',t:'凝时 STILL',tag:'弹幕 · 时停',d:'时间只在你移动时流动。牵引光点穿过凝滞的弹幕海，逃向出口。',href:'./games/still/',key:'still',short:'凝时',c:'#4a6a6e',g:'#a8e3ff',ring:true},
+  {no:'No.03',t:'重力花园',tag:'物理 · 解压',d:'暮色花园里撒下刚体，看它们真实坠落碰撞堆叠。右键引爆，空格翻转重力。',href:'./games/gravity-garden/',key:'gravity-garden',short:'重力花园',c:'#6a8a3a',g:'#d9e08a'},
+  {no:'No.04',t:'墨途',tag:'水墨 · 平台',d:'走过的路留下墨迹，墨迹即桥。墨会蒸发、被啃食、被风吹散，通关时你的轨迹装裱成笔意。',href:'./games/motu/',key:'motu',short:'墨途',c:'#3a3f4a',g:'#c9d2e8'},
+  {no:'No.05',t:'回声小径',tag:'像素 · 回声',d:'「与昨日的自己同行」。像素风平台跳跃，按下 R 录下你的回声，在遗迹间穿行。',href:'./games/echo-trail/',key:'echo-trail',short:'回声小径',c:'#2a7c6e',g:'#8fe8d0'},
+  {no:'No.06',t:'鼓点乒乓',tag:'音游 · 街机',d:'球的往返时间就是节拍，卡拍回击即在演奏鼓机。打得越好，这首曲子越完整。',href:'./games/beat-paddle/',key:'beat-paddle',short:'鼓点乒乓',c:'#6a3d8c',g:'#d9b0ff'},
+  {no:'No.07',t:'慢光 LIGHTLAG',tag:'太空 · 防御',dev:true,d:'光速有限，你看到的敌人是它几秒前的幻影。靠火控预测环解算提前量，守好深空信标。',href:'./games/lightlag/',key:'lightlag',short:'慢光',c:'#46506b',g:'#9fb4d6',ring:true},
+  {no:'No.08',t:'VOCALON! 节拍革命',tag:'音游 · 原曲',dev:true,d:'术力口原曲音游。音符从核心飞向四环，DFJK 径向打击，空格开启子弹时间，OVERDRIVE 时缓爆发。',href:'./games/vocalon-chaos/',key:'vocalon-chaos',short:'节拍革命',c:'#6e4a5c',g:'#d0a8b8'},
+  {no:'No.09',t:'像素乒乓 CAT vs RAT',tag:'街机 · 对决',dev:true,d:'猫鼠乒乓对决。鼠标移拍、按住蓄力、W/S 加旋转，老鼠的球带重力弧线，七分定胜负。',href:'./games/pixel-pong/',key:'pixel-pong',short:'像素乒乓',c:'#465a78',g:'#a4b8d6'},
+  {no:'No.10',t:'回带 REWINDER',tag:'像素 · 时间',dev:true,d:'按住 R 让世界倒退。你用倒带抢救自己，它用倒带改写关卡——它记得你退过多少次。',href:'./games/rewinder/',key:'rewinder',short:'回带',c:'#3a4158',g:'#ccab8a',ring:true},
+  {no:'No.11',t:'拾色 HUEBOUND',tag:'射击 · 涂色',d:'世界被灰烬褪色，你泼墨夺回颜色。红穿透反弹、黄电弧跳三、蓝冰冻碎冰，三色切换打回一整片色谱。',href:'./games/shise/',key:'shise',short:'拾色',c:'#5a2a6a',g:'#e0a0ff'},
+  {no:'No.12',t:'一闪 · 像素居合斩',tag:'动作 · 居合',d:'敌人踏进白线的一瞬拔刀。完美判定慢镜头一刀两断，挥空就是 0.38 秒硬直破绽。',href:'./games/issen/',key:'issen',short:'一闪',c:'#7a2430',g:'#ff9aa8'},
+  {no:'No.13',t:'残光斩 GHOSTSLASH',tag:'动作 · 闪斩',d:'朝鼠标方向闪斩，刀出鞘的一瞬世界凝滞。连斩越多，慢镜头越深。',href:'./games/ghostslash/',key:'ghostslash',short:'残光斩',c:'#203c46',g:'#7fe0e8',ring:true},
+  {no:'No.14',t:'光核围城 LUMEN SIEGE',tag:'像素 · 生存',d:'俯视角像素生存。一盏灯对抗十种蚀影，每次升级三选一，每条枪线都能滚成自己的打法。撑得越久，它们越强。',href:'./games/lumen-siege/',key:'lumen-siege',short:'光核围城',c:'#1e4a58',g:'#9fe8ff',ring:true}
 ];
 var MAIN=6;
 /* 系统「减少动态效果」默认跳过转场（无障碍惯例），但允许显式覆盖：
@@ -806,7 +806,6 @@ function update(dt,t){
           if(ddx*ddx+ddy*ddy<rr*rr){ov=true;break;}}
       }
       po.ov=ov?.72:1;}
-    relaxLabels(dt);
     /* 火箭：外圈轨道巡航，永远在飞 */
     rocket.a+=.2*gdt*(REDUCED?.3:1);
     rocket.x=CX+Math.cos(rocket.a)*172;
@@ -877,56 +876,6 @@ function drawStarCore(t){
   ctx.fillStyle='#ffd54f';ctx.fillText('鼠哥游戏厅',CX,SY+26);
   ctx.textAlign='left';
 }
-/* ---------- 名字避让：标签沿 y 互相推开 + 避开别的行星盘，缓动跟随 ----------
-   行星本体叠有 ghostOverlap 兑底，真正会互相压住的是常显名字：
-   每帧把重叠的标签对沿 y 推开，推完限幅（不撞信息条 / 不远离子行星），再缓动落地。 */
-var LBH=11;
-function labelW(s,fs){var w=0;for(var i=0;i<s.length;i++)w+=(s.charCodeAt(i)>255?fs:fs*.55);return w;}
-function relaxLabels(dt){
-  var vis=[],i,j,it;
-  for(i=0;i<planets.length;i++){var p=planets[i];
-    if(!visible(p))continue;
-    var base=p.y+p.r+11;
-    if(p.lx===undefined){p.lx=p.x;p.ly=base;}
-    vis.push({p:p,w:labelW(p.g.t,FS_LABEL),x:p.lx,y:p.ly,bx:p.x,by:base,tx:p.lx,ty:p.ly});}
-  var n=vis.length;
-  if(n>1){
-    /* 双轴松弛，目标空间内迭代：哪根轴重叠量小就沿哪根推，推完立即生效 */
-    for(it=0;it<4;it++){
-      for(i=0;i<n;i++)for(j=i+1;j<n;j++){
-        var A=vis[i],B=vis[j];
-        var ox=(A.w+B.w)/2+4-Math.abs(A.x-B.x);   /* x 重叠量 */
-        var oy=LBH-Math.abs(A.y-B.y);             /* y 重叠量 */
-        if(ox<=0||oy<=0)continue;
-        var sx=0,sy=0;
-        if(ox<=oy){sx=(ox+1)/2;}else{sy=(oy+1)/2;}
-        if(A.x<=B.x){A.tx-=sx;B.tx+=sx;A.x-=sx;B.x+=sx;}
-        else{A.tx+=sx;B.tx-=sx;A.x+=sx;B.x-=sx;}
-        if(sy){
-          if(A.y<=B.y){A.ty-=sy;B.ty+=sy;A.y-=sy;B.y+=sy;}
-          else{A.ty+=sy;B.ty-=sy;A.y+=sy;B.y-=sy;}}
-      }
-      /* 名字别压在别的行星盘上：沿远离圆心的方向径向推（加强反而连锁撞别的约束，9 是实测最优） */
-      for(i=0;i<n;i++){var L=vis[i];
-        for(j=0;j<planets.length;j++){var q=planets[j];
-          if(q===L.p||!visible(q))continue;
-          var dx=L.x-q.x,dy=L.y-q.y,rr=q.r+9;
-          if(dx*dx+dy*dy>=rr*rr)continue;
-          var d=Math.sqrt(dx*dx+dy*dy)||1,need=rr-d;
-          L.tx+=dx/d*need;L.x+=dx/d*need;
-          L.ty+=dy/d*need;L.y+=dy/d*need;
-        }
-      }
-    }
-  }
-  for(i=0;i<n;i++){var L2=vis[i];
-    var tx=clamp(L2.tx,L2.bx-40,L2.bx+40);   /* 不离自己的行星太远 */
-    var ty=clamp(L2.ty,28,198);              /* 不出画布、不压底部信息条 */
-    ty=clamp(ty,L2.by-30,L2.by+22);
-    L2.p.lx=lerp(L2.p.lx,tx,Math.min(1,dt*7));
-    L2.p.ly=lerp(L2.p.ly,ty,Math.min(1,dt*7));
-  }
-}
 function drawPlanet(p,t){
   var G=p.g;
   var sel=p.i===cur;
@@ -970,22 +919,17 @@ function drawPlanet(p,t){
     ctx.strokeStyle=hexA(G.g,.5*fade*ov);
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,Math.PI,TAU);ctx.stroke();
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,0,Math.PI);ctx.stroke();}
-  /* 常显名字（转场放大时不画；位置经双轴避让，挪远时补一条引线） */
-  if(r>6&&!intro.active){
-    var lx=(p.lx!==undefined)?p.lx:x;
-    var lyy=(p.ly!==undefined)?p.ly:(y+p.r+8);
-    var ddx=lx-x,ddy=lyy-y;
-    if(ddx*ddx+ddy*ddy>100){
-      var dl=Math.sqrt(ddx*ddx+ddy*ddy),ux=ddx/dl,uy=ddy/dl;
-      ctx.globalAlpha=.30*fade*ov;
-      ctx.strokeStyle='#9fd4ef';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(x+ux*(r+2),y+uy*(r+2));ctx.lineTo(lx,lyy-3);ctx.stroke();
-    }
+  /* 常显名字：永远紧贴在星球正下方，不避让、不画引线。
+     短名让标签宽度减半，刻意不重叠；真撞上了有描边兑底，
+     比「名字飘到别处、再用一根线指回去」干净。 */
+  if(r>5&&!intro.active){
+    var name=(G.short||G.t);
+    var lyy=y+p.r+8;
     ctx.globalAlpha=.9*fade*ov;
     ctx.font=FBL;
     ctx.textAlign='center';
-    ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,lx+1,lyy+1);
-    ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,lx,lyy);
+    ctx.fillStyle='rgba(0,0,10,.85)';ctx.fillText(name,x+1,lyy+1);
+    ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(name,x,lyy);
     ctx.textAlign='left';}
   ctx.globalAlpha=1;
 }
