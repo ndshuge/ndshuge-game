@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#050514">
-<title>鼠哥军械库 · NDSHUGE ARMORY</title>
+<title>鼠哥游戏厅 · NDSHUGE ARCADE</title>
 <link rel="stylesheet" href="https://fontsapi.zeoseven.com/570/main/result.css" />
 <style>
 :root{--bg:#050514;--cyan:#00e5ff;--yellow:#ffd54f;--ink:#eafcff;--dim:rgba(150,215,255,.55)}
@@ -47,7 +47,7 @@ body.warping #brand,body.warping #sysbar,body.warping #hint{opacity:0}
 <div id="boot"></div>
 <canvas id="space" width="480" height="270"></canvas>
 <div id="crt"></div>
-<div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARMORY</div>
+<div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARCADE</div>
 <div id="sysbar"><a class="gh" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB</a></div>
 <div id="hint">点行星降落 → 兔子介绍 · ← → 或滑动浏览 · NDSHUGE © 2026</div>
 <!-- 选中的游戏信息 / 进入按钮 / 点赞全部画进 canvas，底部不再叠 DOM 面板 -->
@@ -78,7 +78,30 @@ var GAMES=[
   {no:'No.14',t:'光核围城 LUMEN SIEGE',tag:'像素 · 生存',d:'俯视角像素生存。一盏灯对抗十种蚀影，每次升级三选一，每条枪线都能滚成自己的打法。撑得越久，它们越强。',href:'./games/lumen-siege/',key:'lumen-siege',c:'#1e4a58',g:'#9fe8ff',ring:true}
 ];
 var MAIN=6;
-var REDUCED=matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* 系统「减少动态效果」默认跳过转场（无障碍惯例），但允许显式覆盖：
+   想要动画的人不该被系统的默认值默默挡住。
+   ?anim=on 强制播放，?anim=off 强制跳过，选择记进 localStorage。 */
+var animPref=null;
+var animParam=/[?&]anim=(on|off)/.exec(location.search);
+if(animParam){animPref=animParam[1];try{localStorage.setItem('ng-anim',animPref);}catch(e){}}
+else{try{animPref=localStorage.getItem('ng-anim');}catch(e){}}
+var REDUCED=animPref?animPref==='off':matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* 跳过转场时给一句明确的话。之前是默默省略，看起来就像「动画时有时无」。 */
+(function(){
+  if(!REDUCED||animPref==='off')return;
+  var n=document.createElement('div');
+  n.textContent='系统开启了「减少动态效果」，转场已省略 · 点这里开启';
+  n.style.cssText='position:fixed;left:50%;transform:translateX(-50%);'
+    +'bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:7;'
+    +'font-size:12px;letter-spacing:1px;color:#9fd4ef;background:rgba(4,8,24,.92);'
+    +'border:1px solid rgba(0,229,255,.45);padding:8px 14px;cursor:pointer';
+  n.addEventListener('click',function(){
+    try{localStorage.setItem('ng-anim','on');}catch(e){}
+    location.reload();
+  });
+  document.body.appendChild(n);
+})();
 var IS_TOUCH=matchMedia('(pointer:coarse)').matches;
 var W=480,H=270,CX=W/2,SY=104,TAU=Math.PI*2;
 var cv=document.getElementById('space'),ctx=cv.getContext('2d');
