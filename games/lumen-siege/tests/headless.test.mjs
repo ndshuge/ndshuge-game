@@ -901,11 +901,19 @@ check('touch drives movement and aiming through the same state the keyboard uses
   const ax = Input.axis();
   assert(ax.x > 0.9, `the stick did not produce a rightward axis (${ax.x})`);
 
-  /* Right thumb: aim and hold to fire. */
+  /* Right thumb: aim is a stick too, and holding fires. */
   fire('touchstart', [{ clientX: 380, clientY: 90, identifier: 2 }]);
   assert(Input.mouse.down === true, 'the right side did not begin firing');
-  assert(Input.aim(), 'no aim marker was produced');
-  assert(Input.mouse.x > 300, `aim did not move the crosshair (${Input.mouse.x})`);
+  assert(Input.aimStick(), 'no aim stick was produced');
+  const stick0 = Input.aimStick();
+  assert(stick0 && stick0.dx === 0 && stick0.dy === 0, 'the aim stick did not start at its origin');
+  const stick = Input.aimStick();
+  fire('touchmove', [{ clientX: 380 + 26, clientY: 90, identifier: 2 }]);
+  const av = Input.aimVector();
+  assert(av && av.x > 0.9, `the aim stick did not point right (${JSON.stringify(av)})`);
+  const stickAfter = Input.aimStick();
+  assert(stickAfter && stickAfter.dx > 0 && stickAfter.dy === 0,
+    `aim stick offset wrong: ${JSON.stringify(stickAfter)}`);
 
   /* Release clears both. */
   fire('touchend', [
@@ -915,7 +923,8 @@ check('touch drives movement and aiming through the same state the keyboard uses
   assert(Input.axis().x === 0, 'movement did not stop on release');
   assert(Input.mouse.down === false, 'firing did not stop on release');
   assert(Input.stick() === null, 'the stick survived the release');
-  return 'stick moves, right thumb aims and fires, release clears both';
+  assert(Input.aimStick() === null, 'the aim stick survived the release');
+  return 'stick moves, right thumb aims as a stick and fires, release clears both';
 });
 
 check('the on-screen dash button feeds the same path as the space key', () => {

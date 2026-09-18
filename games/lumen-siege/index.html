@@ -34,13 +34,14 @@
       <button id="btn-mute" class="chip" type="button">SND ON</button>
       <button id="btn-pause" class="chip" type="button">PAUSE</button>
     </div>
-    <!-- dash recharge, centred along the bottom edge -->
-    <div id="dash-bar" class="dash-bar ready" aria-hidden="true">
-      <i id="dash-fill"></i>
-      <span class="dash-bar-label">DASH</span>
+    <!-- dash recharge + touch button, one row along the bottom edge -->
+    <div id="dash-row">
+      <div id="dash-bar" class="dash-bar ready" aria-hidden="true">
+        <i id="dash-fill"></i>
+        <span class="dash-bar-label">DASH</span>
+      </div>
+      <button id="btn-dash" class="touch-btn" type="button">冲刺</button>
     </div>
-    <!-- touch only: revealed once a real touch has been seen -->
-    <button id="btn-dash" class="touch-btn" type="button">冲刺</button>
   </div>
 
   <!-- touch only: a 16:9 arena has no sensible portrait form, so ask for landscape -->

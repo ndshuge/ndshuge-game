@@ -74,7 +74,9 @@
     originX: 0, originY: 0,
     moveX: 0, moveY: 0,   // -1..1, normalised
     aimId: null,
-    aimX: 0, aimY: 0
+    aimOriginX: 0, aimOriginY: 0,
+    aimDX: 0, aimDY: 0,   // aim stick, -1..1
+    aimX: 0, aimY: 0      // raw thumb position, for drawing
   };
 
   function findTouch(list, id) {
@@ -100,11 +102,15 @@
         touch.moveX = 0;
         touch.moveY = 0;
       } else if (p.x >= PG.VIEW_W / 2 && touch.aimId === null) {
+        /* the right stick also appears under the thumb: the offset from where it
+           landed is the aim direction, so aiming never requires reaching the edge */
         touch.aimId = t.identifier;
+        touch.aimOriginX = p.x;
+        touch.aimOriginY = p.y;
+        touch.aimDX = 0;
+        touch.aimDY = 0;
         touch.aimX = p.x;
         touch.aimY = p.y;
-        mouse.x = p.x;
-        mouse.y = p.y;
         mouse.down = true;
       }
     }
@@ -126,10 +132,19 @@
         touch.moveX = dx / STICK_RADIUS;
         touch.moveY = dy / STICK_RADIUS;
       } else if (t.identifier === touch.aimId) {
-        touch.aimX = p.x;
-        touch.aimY = p.y;
-        mouse.x = p.x;
-        mouse.y = p.y;
+        /* aim is a stick too: the thumb's offset from where it landed is the
+           direction, so aiming never requires reaching the screen edge */
+        var adx = p.x - touch.aimOriginX;
+        var ady = p.y - touch.aimOriginY;
+        var alen = Math.sqrt(adx * adx + ady * ady);
+        if (alen > AIM_RADIUS) {
+          adx *= AIM_RADIUS / alen;
+          ady *= AIM_RADIUS / alen;
+        }
+        touch.aimDX = adx / AIM_RADIUS;
+        touch.aimDY = ady / AIM_RADIUS;
+        touch.aimX = touch.aimOriginX + adx;
+        touch.aimY = touch.aimOriginY + ady;
       }
     }
   }
@@ -145,9 +160,14 @@
       } else if (t.identifier === touch.aimId) {
         touch.aimId = null;
         mouse.down = false;
+        touch.aimDX = 0;
+        touch.aimDY = 0;
       }
     }
   }
+
+  /*: Drag distance, in logical pixels, that counts as full stick deflection. */
+  var AIM_RADIUS = 26;
 
   var Input = {
     init: function (canvasEl) {
@@ -202,7 +222,28 @@
       };
     },
 
-    /*: Where the aim thumb is, or null. */
+    /*: The aim stick: where the thumb landed, where it is now, and the normalised
+       direction. Null when the right thumb is up. */
+    aimStick: function () {
+      if (touch.aimId === null) return null;
+      return {
+        ox: touch.aimOriginX, oy: touch.aimOriginY,
+        dx: touch.aimDX, dy: touch.aimDY,
+        x: touch.aimX, y: touch.aimY,
+        radius: AIM_RADIUS
+      };
+    },
+
+    /*: The aim direction, or null when the thumb is still near its origin (keep
+       the last aim in that case, so a twitch does not swing the lantern around). */
+    aimVector: function () {
+      if (touch.aimId === null) return null;
+      var l = Math.sqrt(touch.aimDX * touch.aimDX + touch.aimDY * touch.aimDY);
+      if (l < 0.18) return null;
+      return { x: touch.aimDX / l, y: touch.aimDY / l };
+    },
+
+    /*: The aim marker, for drawing. */
     aim: function () {
       if (touch.aimId === null) return null;
       return { x: touch.aimX, y: touch.aimY };

@@ -12,10 +12,11 @@
 
   function resize() {
     var fit = Math.min(window.innerWidth / PG.VIEW_W, window.innerHeight / PG.VIEW_H);
-    /* Integer scaling keeps the pixels crisp. Below 1x we have to accept a
-       fractional scale, otherwise the stage overflows a narrow window and the
-       HUD gets clipped by the page. */
-    var scale = fit >= 1 ? Math.floor(fit) : Math.max(fit, 0.25);
+    /* Desktop keeps integer scaling for crisp pixels. A finger-first device fills
+       the screen instead: at phone sizes an integer floor can leave half the display
+       black (a 390px-tall landscape phone would run at 1x = 270px and waste 120px). */
+    var coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var scale = coarse ? fit : (fit >= 1 ? Math.floor(fit) : Math.max(fit, 0.25));
     var w = Math.round(PG.VIEW_W * scale);
     var h = Math.round(PG.VIEW_H * scale);
     canvas.style.width = w + 'px';

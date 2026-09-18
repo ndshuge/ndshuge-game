@@ -275,9 +275,16 @@
     var world = game.world;
     var Input = PG.Input;
 
-    var mwx = Input.mouse.x + game.camX;
-    var mwy = Input.mouse.y + game.camY;
-    this.angle = Math.atan2(mwy - this.y, mwx - this.x);
+    /* Aim: the right thumb's stick direction on touch, else the mouse position. */
+    var aimV = Input.aimVector ? Input.aimVector() : null;
+    if (aimV) {
+      this.angle = Math.atan2(aimV.y, aimV.x);
+    } else if (!Input.touchActive || !Input.touchActive()) {
+      var mwx = Input.mouse.x + game.camX;
+      var mwy = Input.mouse.y + game.camY;
+      this.angle = Math.atan2(mwy - this.y, mwx - this.x);
+    }
+    /* right thumb down but near its origin: keep the last aim instead of swinging */
 
     if (this.invuln > 0) this.invuln -= dt;
     if (this.hurtFlash > 0) this.hurtFlash -= dt;

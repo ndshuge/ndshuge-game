@@ -141,31 +141,10 @@ body {
 /* No scrolling, no pinch zoom, no long-press menu while playing. */
 #game { touch-action: none; }
 
-.touch-btn {
-  position: absolute;
-  right: 18px;
-  bottom: 56px;
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  font: inherit;
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: var(--accent);
-  background: rgba(10, 20, 30, 0.55);
-  border: 2px solid var(--accent-dim);
-  pointer-events: auto;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
-}
+/* ============ touch reveal ============ */
+
+.touch-btn { display: none; }
 body.touch-mode .touch-btn { display: flex; }
-.touch-btn.active {
-  background: rgba(95, 224, 200, 0.28);
-  box-shadow: 0 0 14px rgba(95, 224, 200, 0.4);
-}
 
 #hud {
   padding: 8px 10px 52px;   /* bottom padding keeps the dash bar clear of the HUD row */
@@ -250,15 +229,21 @@ body.touch-mode .touch-btn { display: flex; }
   to { color: #b8f4ea; border-color: var(--accent); }
 }
 
-/* Dash recharge, centred on the bottom edge. Sized to be read without looking
-   directly at it: area is roughly 16x the first pass, which keeps the 16.5:1 bar
-   shape but makes the fill level obvious from the corner of the eye. */
-.dash-bar {
+/* Dash recharge + touch button, sharing one row along the bottom edge. The bar is
+   centred by the row itself, and the button only appears on finger-first devices. */
+#dash-row {
   position: absolute;
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
-  width: min(528px, 82%);
+  width: min(560px, 86%);
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  pointer-events: none;
+}
+.dash-bar {
+  flex: 1;
   height: 32px;
   background: #060b12;
   border: 2px solid var(--line);
@@ -288,7 +273,34 @@ body.touch-mode .touch-btn { display: flex; }
   text-shadow: 1px 1px 0 #000;
   pointer-events: none;
 }
+.dash-bar { position: relative; left: auto; bottom: auto; transform: none; }
 .dash-bar.ready .dash-bar-label { color: rgba(3, 28, 25, 0.85); }
+
+.touch-btn {
+  display: none;
+  width: 96px;
+  height: 32px;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  background: rgba(10, 20, 30, 0.6);
+  border: 2px solid var(--accent-dim);
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+body.touch-mode .touch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.touch-btn.active {
+  background: rgba(95, 224, 200, 0.3);
+  border-color: var(--accent);
+  color: #03121e;
+}
 
 .chip {
   pointer-events: auto;

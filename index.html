@@ -22,58 +22,21 @@ body{font-family:"Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospa
 .gh{font-size:12px;letter-spacing:1px;color:var(--cyan);text-decoration:none;
   border:1px solid rgba(0,229,255,.4);padding:5px 10px;background:rgba(4,8,24,.7)}
 .gh:active{background:rgba(0,229,255,.16)}
-/* 像素信息卡 */
-#card{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));
-  z-index:5;width:min(400px,90vw);pointer-events:none;
-  background:rgba(4,8,24,.9);border:1px solid rgba(0,229,255,.4);
-  box-shadow:inset 0 0 0 1px rgba(0,229,255,.1),0 0 24px rgba(0,229,255,.16);
-  padding:10px 14px 12px;text-align:center}
-#card::before,#card::after{content:'';position:absolute;width:6px;height:6px;background:var(--cyan)}
-#card::before{left:-3px;top:-3px}
-#card::after{right:-3px;top:-3px}
-#card .no{font-size:12px;letter-spacing:2px;color:var(--dim)}
-#card .no b{color:var(--yellow);font-weight:normal}
-#card .devtag{display:inline-block;font-size:12px;color:#9fb4d6;border:1px solid rgba(159,180,214,.5);padding:0 5px;margin-left:6px}
-#card h1{font-size:24px;letter-spacing:3px;color:var(--ink);font-weight:normal;margin-top:6px;
-  text-shadow:0 0 8px rgba(0,229,255,.8),0 0 24px rgba(0,229,255,.35)}
-#card .tag{font-size:12px;letter-spacing:2px;color:var(--cyan);margin-top:4px}
-#card .desc{font-size:12px;line-height:1.8;color:#9fd4ef;margin-top:7px;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.btnrow{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:10px;pointer-events:auto}
-.enter{display:inline-block;font-family:inherit;font-size:14px;letter-spacing:4px;
-  color:#03121e;background:var(--cyan);border:none;padding:12px 26px;cursor:pointer;
-  text-decoration:none;box-shadow:0 4px 0 #008ba3;min-height:44px;line-height:1.2}
-.enter:active{transform:translateY(4px);box-shadow:0 0 0 #008ba3}
-.like{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;letter-spacing:1px;
-  color:#ff8ba0;background:rgba(255,110,140,.06);border:1px solid rgba(255,110,140,.4);
-  padding:11px 13px;cursor:pointer;min-height:44px;box-sizing:border-box;
-  box-shadow:0 4px 0 rgba(120,30,50,.55)}
-.like:active{transform:translateY(4px);box-shadow:0 0 0 rgba(120,30,50,.55)}
-.like.on{color:#ff5c7a;border-color:#ff5c7a;background:rgba(255,92,122,.12)}
-.like.pop{animation:likepop .45s ease-out}
-@keyframes likepop{0%{transform:scale(1)}40%{transform:scale(1.16)}100%{transform:scale(1)}}
-#devslot{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(4px + env(safe-area-inset-bottom,0px));
-  z-index:5;width:min(400px,90vw)}
-#devToggle{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
-  font-family:inherit;font-size:12px;letter-spacing:1px;color:rgba(120,190,230,.5);
-  background:transparent;border:1px dashed rgba(0,229,255,.25);
-  padding:6px 8px;cursor:pointer;min-height:30px}
-#devToggle.open{color:var(--cyan);border-style:solid;background:rgba(0,229,255,.07)}
+/* 选中游戏的编号 / 标题 / 描述 / 进入按钮 / 点赞全部画进 canvas，
+   底部不再叠任何 DOM 面板；DOM 只剩品牌条、GITHUB 和提示行。 */
 #hint{position:fixed;top:44px;left:0;right:0;z-index:5;
   font-size:12px;letter-spacing:1px;color:rgba(120,190,230,.4);text-align:center;pointer-events:none}
-.swap{animation:swap .28s ease-out}
-@keyframes swap{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
-body.warping #info,body.warping #brand,body.warping #sysbar,body.warping #devslot,body.warping #hint{opacity:0}
-#info,#brand,#sysbar,#devslot,#hint{transition:opacity .3s}
-@media (max-width:640px){
-  #card h1{font-size:20px}
-}
-@media (orientation:portrait){
+body.warping #brand,body.warping #sysbar,body.warping #hint{opacity:0}
+#brand,#sysbar,#hint{transition:opacity .3s}
+#rotate{display:none;position:fixed;left:0;right:0;
+  bottom:calc(10px + env(safe-area-inset-bottom,0px));z-index:5;text-align:center;
+  font-size:12px;letter-spacing:1px;color:rgba(120,190,230,.5);pointer-events:none}
+@media (orientation:portrait) and (max-width:820px){
   body{background:linear-gradient(#070a1e,#03040e)}
   #space{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent);
          mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent)}
+  #rotate{display:block}
 }
-@media (prefers-reduced-motion:reduce){.swap{animation:none}}
 #boot{position:fixed;inset:0;z-index:50;background:#02030c;pointer-events:none;
   animation:bootin 1.2s ease-in .45s forwards}
 @keyframes bootin{to{opacity:0}}
@@ -85,20 +48,9 @@ body.warping #info,body.warping #brand,body.warping #sysbar,body.warping #devslo
 <div id="crt"></div>
 <div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARMORY</div>
 <div id="sysbar"><a class="gh" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB</a></div>
-<div id="hint">点行星直接跃迁进入游戏 · ← → 或滑动浏览 · NDSHUGE © 2026</div>
-<div id="card">
-  <div class="no"><b id="gNo">No.01</b><span class="devtag" id="gDev" style="display:none">待开发</span></div>
-  <h1 id="gTitle">西线前线</h1>
-  <div class="tag" id="gTag">FPS · 战役</div>
-  <div class="desc" id="gDesc"></div>
-  <div class="btnrow">
-    <button class="like" id="likeBtn" aria-label="点赞">&#9829;<span id="likeN">&middot;</span></button>
-    <a class="enter" id="gEnter" href="./games/ww2-frontline/">进入游戏</a>
-  </div>
-</div>
-<div id="devslot">
-  <button id="devToggle">&middot; 不成熟待开发区 &middot; 4 件 &middot; 接受拍砖 &middot;</button>
-</div>
+<div id="hint">点行星降落 → 兔子介绍 · ← → 或滑动浏览 · NDSHUGE © 2026</div>
+<!-- 选中的游戏信息 / 进入按钮 / 点赞全部画进 canvas，底部不再叠 DOM 面板 -->
+<div id="rotate">↻ 手机横屏体验更佳</div>
 <script>
 'use strict';
 window.addEventListener('error',function(ev){
@@ -144,13 +96,17 @@ function fit(){
   cv.style.width=Math.ceil(W*s)+'px';cv.style.height=Math.ceil(H*s)+'px';}
 addEventListener('resize',fit);fit();
 
-/* 行星轨道分配：三圈椭圆，内快外慢，初始相位按圈内序号均匀铺开 */
-var ORBR=[70,110,150],ORBP=[.11,.075,.05],SPOTY=SY-2;
-var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[11,12.5,14][i%3],pulse:0};});
+/* 行星轨道分配：三圈椭圆，内快外慢。
+   相位 = 圈内序号 × (TAU / 圈内数量)，同轨相邻行星的角距恒为 360°/n
+   （内圈/中圈各 5 颗 → 72°，外圈 4 颗 → 90°），这是“最小角距”的硬保证；
+   每圈再叠一个固定偏移，避免三圈在同一条视线上排成一串。 */
+var ORBR=[70,110,148],ORBP=[.11,.075,.05],SQUASH=.46,SPOTY=SY-2;
+var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[11,12.5,14][i%3],pulse:0,ov:1};});
 (function(){
   for(var o=0;o<3;o++){
     var m=planets.filter(function(p){return p.orbit===o;});
-    m.forEach(function(p,j){p.a=j/m.length*TAU+o*.9;});
+    var step=TAU/m.length;
+    m.forEach(function(p,j){p.a=j*step+o*.8;});
   }
   planets.forEach(function(p){p.sp=ORBP[p.orbit]*(p.i%2?1:-1)*(REDUCED?.35:1);});
 })();
@@ -162,11 +118,10 @@ try{cur=clamp(parseInt(localStorage.getItem('armory_index')||'0',10)||0,0,GAMES.
 if(!visible(planets[cur]))cur=0;
 
 var rocket={a:Math.PI*.25,x:CX,y:SPOTY,salute:0,clicks:0,last:0,hop:0,_x:CX,_y:SPOTY};
-var warp={active:false,i:-1,t:0,k:0};
-var flash={active:false,t:0};
-var parts=[],wstars=[];
-for(var wi=0;wi<42;wi++)wstars.push({a:rnd(0,TAU),d:rnd(4,300),sp:rnd(260,620),px:-999,py:-999});
+var flash={active:false,t:0,dur:.34};
+var parts=[];
 var gdt=1/60,mouseX=CX,mouseY=SY,mox=0,moy=0,shakeT=0,whitePop=0,flameAcc=0;
+var worldLW=1,infoFade=1;
 
 var bgGrad=ctx.createLinearGradient(0,0,0,H);
 bgGrad.addColorStop(0,'#070a1e');bgGrad.addColorStop(1,'#03040e');
@@ -202,53 +157,396 @@ function tone(type,f0,f1,dur,peak,delay){if(!actx)return;
 function tick(){tone('square',700,980,.06,.08);}
 function whoosh(){tone('sawtooth',180,520,.4,.1);tone('square',90,260,.4,.06);}
 
-/* 信息卡 / 点赞 */
+/* 点赞 / 选中项缓存
+   #card 与 #devslot 的 DOM 已删：信息与入口改画进 canvas，点赞也是 canvas 按钮。
+   这里只负责取数、写 localStorage、维护内存缓存，不碰任何 DOM。 */
 function $(id){return document.getElementById(id);}
-var infoEl=$('card');
 var NS='ndshuge-game',API='https://abacus.jasoncameron.dev';
+var FB='12px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+var FB16='16px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+var likeCache={},likeOn={},likePop={};
 function likedKey(k){return 'ng-like-'+k;}
-function renderCount(el,v){el.textContent=v>=1000?(v/1000).toFixed(1).replace(/\.0$/,'')+'k':String(v);}
-function bindLike(key){
-  var n=$('likeN'),on=false;
-  try{on=localStorage.getItem(likedKey(key))==='1';}catch(e){}
-  $('likeBtn').classList.toggle('on',on);
-  n.textContent='\u00b7';
+function isLiked(k){try{return localStorage.getItem(likedKey(k))==='1';}catch(e){return false;}}
+function countText(v){if(typeof v!=='number')return '\u00b7';
+  return v>=1000?(v/1000).toFixed(1).replace(/\.0$/,'')+'k':String(v);}
+function fetchLike(key){
   try{fetch(API+'/get/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
-    if(j&&typeof j.value==='number')renderCount(n,j.value);}).catch(function(){});}catch(e){}
+    if(j&&typeof j.value==='number')likeCache[key]=j.value;}).catch(function(){});}catch(e){}
 }
-$('likeBtn').addEventListener('click',function(){
-  var key=GAMES[cur].key,was=false;
-  try{was=localStorage.getItem(likedKey(key))==='1';}catch(e){}
-  if(was)return;
+function addLike(key){
+  if(isLiked(key))return;
   try{localStorage.setItem(likedKey(key),'1');}catch(e){}
-  var btn=$('likeBtn');btn.classList.add('on','pop');
-  setTimeout(function(){btn.classList.remove('pop');},500);
-  var n=$('likeN'),c2=parseInt(n.textContent,10);if(isNaN(c2))c2=0;
-  renderCount(n,c2+1);
+  likeOn[key]=true;likePop[key]=1;
+  likeCache[key]=(typeof likeCache[key]==='number'?likeCache[key]:0)+1;
+  tone('square',880,1320,.09,.09);tone('square',1320,1760,.07,.05,.06);
   try{fetch(API+'/hit/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
-    if(j&&typeof j.value==='number')renderCount(n,j.value);}).catch(function(){});}catch(e){}
-});
-function renderInfo(){
-  var G=GAMES[cur];
-  $('gNo').textContent=G.no;
-  $('gDev').style.display=G.dev?'inline-block':'none';
-  $('gTitle').textContent=G.t;
-  $('gTag').textContent=G.tag;
-  $('gDesc').textContent=G.d;
-  $('gEnter').href=G.href;
-  bindLike(G.key);
-  infoEl.classList.remove('swap');void infoEl.offsetWidth;infoEl.classList.add('swap');
+    if(j&&typeof j.value==='number')likeCache[key]=j.value;}).catch(function(){});}catch(e){}
 }
-/* 点行星：直接跃迁进入游戏 */
+function renderInfo(){
+  /* 编号/标题/描述已画进 canvas，这里只刷新点赞缓存 */
+  var k=GAMES[cur].key;likeOn[k]=isLiked(k);fetchLike(k);
+}
+/* 逐字测量换行；最多 maxLines 行，溢出补省略号 */
+function wrapText(str,maxW,maxLines){
+  var all=[],cur='';
+  for(var i=0;i<str.length;i++){
+    var ch=str.charAt(i);
+    if(cur&&ctx.measureText(cur+ch).width>maxW){all.push(cur);cur='';}
+    cur+=ch;}
+  if(cur)all.push(cur);
+  if(all.length>maxLines){
+    all=all.slice(0,maxLines);
+    var last=all[maxLines-1];
+    while(last.length&&ctx.measureText(last+'\u2026').width>maxW)last=last.slice(0,-1);
+    all[maxLines-1]=last+'\u2026';}
+  return all;
+}
+function drawHeart(x,y,c){
+  ctx.fillStyle=c;
+  ctx.fillRect(x+1,y,2,2);ctx.fillRect(x+5,y,2,2);
+  ctx.fillRect(x,y+2,8,2);ctx.fillRect(x+1,y+4,6,1);
+  ctx.fillRect(x+2,y+5,4,1);ctx.fillRect(x+3,y+6,2,1);
+}
+
+/* ---------------- 点行星：追上降落 → 出舱相遇 → 投影面板 ----------------
+   chase   1.0s  相机俯冲进目标行星，火箭离开巡航轨道悬停到行星上空
+   descent 0.7s  火箭缓缓落到行星表面
+   touch   0.3s  触地扬尘
+   meet    1.7s  老鼠出舱 / 兔子出基地，相向走到中间握手
+   panel   0.5s  投影仪亮起，面板淡入
+   全程约 4.2s；任意时刻点击 = 跳过转场直接进入。 */
+var LY=176;                        /* 地平线（着陆点）屏幕 y */
+var PX=16,PY=8,PW=W-32,PH=120;     /* 投影面板矩形 */
+var ROCKET_X=CX-58,BASE_X=CX+64;
+function ease(k){return k*k*(3-2*k);}
+function hitRect(r,x,y){return !!r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;}
+var INTRO={chase:1.0,descent:.7,touch:.3,meet:1.7,panel:.5};
+var intro={active:false,i:-1,phase:'chase',t:0,
+  W:{x:0,y:0},camAX:0,camAY:0,camZ:1,Z:50,arcR:600,
+  sx:0,sy:0,rx:0,ry:0,scale:1,
+  doorOpen:0,mx:0,my:0,bx:0,by:0,marm:0,barm:0,walkPh:0,clasp:false,
+  panel:0,starK:1,enterR:null,likeR:null,panelR:null};
+function groundY(x){var d=x-CX,R=intro.arcR,t=R*R-d*d;return LY+(t>0?R-Math.sqrt(t):0);}
+/* 转场相机：世界点 intro.W 落到屏幕 (camAX,camAY)、按 camZ 缩放；非转场时为单位阵+抖动 */
+function camApply(shX,shY){
+  var z=intro.active?intro.camZ:1;
+  var ax=intro.active?intro.camAX:0,ay=intro.active?intro.camAY:0;
+  var wx=intro.active?intro.W.x:0,wy=intro.active?intro.W.y:0;
+  ctx.setTransform(z,0,0,z,ax-wx*z+shX,ay-wy*z+shY);
+}
 function launchWarp(i){
-  if(warp.active)return;
+  if(intro.active||flash.active)return;
   cur=i;
   try{localStorage.setItem('armory_index',String(i));}catch(e){}
-  renderInfo();
   if(REDUCED){location.href=GAMES[i].href;return;}
-  warp.active=true;warp.i=i;warp.t=0;warp.k=0;
+  var p=planets[i];
+  audio();
+  intro.active=true;intro.i=i;intro.phase='chase';intro.t=0;
+  intro.W={x:p.x,y:p.y-p.r};          /* 目标行星顶端 = 着陆点 */
+  intro.Z=600/p.r;intro.arcR=600;
+  intro.camZ=1;intro.camAX=intro.W.x;intro.camAY=intro.W.y;
+  intro.sx=rocket.x;intro.sy=rocket.y+9;   /* 巡航火箭底缘 */
+  intro.scale=1;intro.doorOpen=0;intro.marm=0;intro.barm=0;
+  intro.panel=0;intro.clasp=false;intro.walkPh=0;intro.starK=1;
+  intro.mx=CX-52;intro.my=LY;intro.bx=BASE_X;intro.by=LY;
+  intro.enterR=null;intro.likeR=null;intro.panelR=null;
   document.body.classList.add('warping');
-  tone('sawtooth',110,880,1.0,.14);tone('square',55,440,1.0,.08);
+  tone('sawtooth',120,760,.8,.12);tone('square',60,320,.8,.06);
+}
+function go(){                        /* 渐黑后跳转 */
+  if(flash.active)return;
+  flash.active=true;flash.t=flash.dur;
+  tone('square',660,990,.12,.08);
+}
+function touchdown(){
+  shakeT=REDUCED?0:.22;whoosh();tone('sine',130,45,.42,.26);
+  for(var i=0;i<26;i++){
+    parts.push({x:intro.rx+rnd(-9,9),y:LY-2,vx:rnd(-62,62),vy:rnd(-36,-8),
+      age:0,life:rnd(.35,.85),s:Math.random()<.4?2:1,
+      c:Math.random()<.5?'#93a4bd':'#cfd8dc'});}
+}
+function introUpdate(dt){
+  var ph=intro.phase,dur=INTRO[ph]||1,k=clamp(intro.t/dur,0,1);
+  intro.t+=dt;
+  if(ph==='chase'){
+    var e=ease(k);
+    intro.camZ=lerp(1,intro.Z,e);
+    intro.camAX=lerp(intro.W.x,CX,e);intro.camAY=lerp(intro.W.y,LY,e);
+    intro.rx=lerp(intro.sx,ROCKET_X,e);
+    intro.ry=lerp(intro.sy,LY-46,e);
+    intro.scale=lerp(1,2,e);
+    if(k>=1){intro.phase='descent';intro.t=0;}
+  }else if(ph==='descent'){
+    intro.camZ=intro.Z;intro.camAX=CX;intro.camAY=LY;
+    intro.rx=ROCKET_X;intro.scale=2;
+    intro.ry=lerp(LY-46,LY,ease(k));
+    if(k>=1){intro.phase='touch';intro.t=0;touchdown();}
+  }else if(ph==='touch'){
+    if(k>=1){intro.phase='meet';intro.t=0;}
+  }else if(ph==='meet'){
+    /* 0-.18 开门出舱 / .18-.62 相向走 / .62-.80 伸手 / .80-1 握手 */
+    intro.doorOpen=clamp(k/.18,0,1);
+    var w=clamp((k-.18)/.44,0,1),we=ease(w);
+    intro.walkPh=w*3.2;
+    intro.mx=lerp(CX-52,CX-8,we);intro.bx=lerp(BASE_X,CX+8,we);
+    intro.my=groundY(intro.mx);intro.by=groundY(intro.bx);
+    var a=w>=1?clamp((k-.62)/.18,0,1):0;
+    intro.marm=a;intro.barm=a;
+    if(k>.80&&!intro.clasp){
+      intro.clasp=true;
+      tone('square',980,1480,.10,.10);tone('square',1320,1760,.10,.05,.05);
+      for(var si=0;si<14;si++){var sa=rnd(0,TAU);
+        parts.push({x:CX,y:LY-13,vx:Math.cos(sa)*rnd(16,52),vy:Math.sin(sa)*rnd(16,42)-10,
+          age:0,life:rnd(.25,.5),s:1,c:Math.random()<.5?'#ffd54f':'#5fe0c8'});}
+    }
+    if(k>=1){intro.phase='panel';intro.t=0;}
+  }else if(ph==='panel'){
+    intro.panel=clamp(intro.t/INTRO.panel,0,1);
+  }
+  intro.starK=lerp(intro.starK,intro.phase==='chase'?1.7:1,Math.min(1,dt*2.2));
+}
+
+/* ---------- 转场里的像素道具与角色（全部程序化绘制，无外部资源） ---------- */
+var SUIT='#e6eef2',SUIT2='#bfced6',SUITD='#7d97a6';
+function drawLander(cx,by,s,open,flame,t){
+  var x=Math.round(cx),y=Math.round(by);
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+  /* 发动机喷口 + 尾焰（flame 0..1，落地时收小） */
+  ctx.fillStyle='#2a3548';ctx.fillRect(-2,-2,4,2);
+  if(flame>.05){
+    var fl=Math.round((5+Math.sin(t*26)*2)*flame);
+    ctx.fillStyle='rgba(255,213,79,.5)';ctx.fillRect(-1,0,2,fl+3);
+    ctx.fillStyle='#ffd54f';ctx.fillRect(-2,0,4,Math.max(1,fl-2));
+    ctx.fillStyle='#ffffff';ctx.fillRect(-1,0,2,2);}
+  /* 起落架：细斜撑 + 脚垫 */
+  ctx.fillStyle='#7d8a96';
+  ctx.fillRect(-6,-4,1,4);ctx.fillRect(5,-4,1,4);
+  ctx.fillRect(-8,0,3,1);ctx.fillRect(5,0,3,1);
+  /* 尾翼（底外扩的鳍） */
+  ctx.fillStyle='#ff4757';
+  ctx.fillRect(-7,-9,3,7);ctx.fillRect(4,-9,3,7);
+  ctx.fillRect(-6,-10,2,1);ctx.fillRect(4,-10,2,1);
+  /* 船体：8 宽 18 高（比巡航火箭高瘦，读得出是火箭） */
+  ctx.fillStyle='#cfd8dc';ctx.fillRect(-4,-21,8,18);
+  ctx.fillStyle='#ffffff';ctx.fillRect(1,-21,1,18);
+  ctx.fillStyle='rgba(10,25,60,.28)';ctx.fillRect(-4,-21,1,18);
+  /* 头锥 */
+  ctx.fillStyle='#ff4757';
+  ctx.fillRect(-3,-24,6,3);ctx.fillRect(-2,-26,4,2);
+  ctx.fillStyle='#ffffff';ctx.fillRect(-1,-28,2,2);
+  /* 舷窗：老鼠驾驶员在里面（与巡航火箭同一只） */
+  ctx.fillStyle='#0a1420';ctx.fillRect(-3,-17,6,6);
+  ctx.fillStyle='#b9b7b4';ctx.fillRect(-2,-15,4,4);
+  ctx.fillStyle='#ffb6c8';ctx.fillRect(-3,-18,2,2);ctx.fillRect(1,-18,2,2);
+  ctx.fillStyle='#08122e';ctx.fillRect(-2,-14,1,1);ctx.fillRect(1,-14,1,1);
+  ctx.fillStyle='#ffb6c8';ctx.fillRect(0,-13,1,1);
+  /* 舱门（右侧）：open 0=关 1=开 */
+  ctx.fillStyle='#0a1420';ctx.fillRect(0,-11,4,7);
+  if(open<1){ctx.fillStyle='#9fb4d6';ctx.fillRect(0,-11,4,Math.round(7*(1-open)));}
+  if(open>.05){ctx.fillStyle='#9fb4d6';ctx.fillRect(4,-12-Math.round(open*2),1,7);}
+  ctx.fillStyle='#5fe0c8';ctx.fillRect(1,-9,1,1);
+  ctx.restore();
+}
+function drawBase(x,y,open,t){
+  x=Math.round(x);y=Math.round(y);
+  ctx.fillStyle='rgba(0,0,14,.45)';ctx.fillRect(x-12,y-1,24,2);
+  /* 底座 */
+  ctx.fillStyle='#2a3548';ctx.fillRect(x-11,y-9,22,9);
+  ctx.fillStyle='#3d4e66';ctx.fillRect(x-11,y-9,22,2);ctx.fillRect(x-9,y-6,18,1);
+  /* 圆顶小屋（像素阶梯 + 左上高光） */
+  ctx.fillStyle='#33425a';
+  ctx.fillRect(x-2,y-17,4,2);
+  ctx.fillRect(x-5,y-15,10,2);
+  ctx.fillRect(x-7,y-13,14,2);
+  ctx.fillRect(x-8,y-11,16,2);
+  ctx.fillStyle='#4d6383';
+  ctx.fillRect(x-2,y-17,3,2);ctx.fillRect(x-5,y-15,5,2);
+  ctx.fillRect(x-7,y-13,6,2);ctx.fillRect(x-8,y-11,6,2);
+  /* 亮门（缺口 + 发光门框） */
+  ctx.fillStyle='#0d2436';ctx.fillRect(x-3,y-10,6,10);
+  ctx.fillStyle='#8fd0f5';ctx.fillRect(x-2,y-9,4,Math.round(9*(1-open*.6)));
+  ctx.globalAlpha=.30+.16*Math.sin(t*4);
+  ctx.fillStyle='#8fd0f5';ctx.fillRect(x-5,y-10,10,4);
+  ctx.globalAlpha=1;
+  /* 天线 + 一闪一闪的顶灯 */
+  ctx.fillStyle='#43536e';ctx.fillRect(x+7,y-26,1,16);
+  ctx.fillStyle=(Math.sin(t*5)>0)?'#ffd54f':'#7a5b16';ctx.fillRect(x+6,y-29,3,3);
+  /* 侧灯 */
+  ctx.fillStyle='#5fe0c8';ctx.fillRect(x-9,y-8,1,1);ctx.fillRect(x+8,y-8,1,1);
+}
+function drawMouse(x,y,ph,dir,arm,t){
+  x=Math.round(x);y=Math.round(y);
+  var f=(Math.floor(ph*9)%2)?0:1,b=f?1:0;
+  var body='#b9b7b4',dark='#8b8986',ear='#ffb6c8';
+  ctx.fillStyle='rgba(0,0,14,.45)';ctx.fillRect(x-5,y-1,10,2);
+  /* 尾巴 */
+  ctx.fillStyle=dark;
+  ctx.fillRect(dir>0?x-9:x+6,y-5,3,1);
+  ctx.fillRect(dir>0?x-11:x+9,y-7,2,1);
+  /* 腿 */
+  ctx.fillStyle=dark;
+  if(f){ctx.fillRect(x-3,y-4,2,4);ctx.fillRect(x+1,y-3,2,3);}
+  else{ctx.fillRect(x-3,y-3,2,3);ctx.fillRect(x+1,y-4,2,4);}
+  /* 身体 */
+  ctx.fillStyle=body;ctx.fillRect(x-4,y-13+b,8,10);
+  ctx.fillStyle='#dcdad7';ctx.fillRect(x-2,y-10+b,4,6);
+  /* 手臂：arm>0 时向 dir 侧伸出 */
+  ctx.fillStyle=body;
+  if(arm>0){var aL=2+Math.round(arm*2);ctx.fillRect(dir>0?x+4:x-4-aL,y-12+b,aL,2);}
+  else{ctx.fillRect(x-6,y-11+b,2,5);ctx.fillRect(x+4,y-11+b,2,5);}
+  /* 头 */
+  ctx.fillStyle=body;ctx.fillRect(x-4,y-18+b,8,6);
+  /* 耳 */
+  ctx.fillStyle=ear;ctx.fillRect(x-5,y-22+b,3,4);ctx.fillRect(x+2,y-22+b,3,4);
+  ctx.fillStyle=dark;ctx.fillRect(x-4,y-21+b,1,2);ctx.fillRect(x+3,y-21+b,1,2);
+  /* 脸 */
+  ctx.fillStyle='#08122e';
+  ctx.fillRect(dir>0?x-1:x-2,y-16+b,1,2);
+  ctx.fillRect(dir>0?x+1:x,y-16+b,1,2);
+  ctx.fillStyle=ear;ctx.fillRect(x+dir*3,y-15+b,1,1);
+}
+function drawRabbit(x,y,ph,dir,arm,t){
+  x=Math.round(x);y=Math.round(y);
+  var f=(Math.floor(ph*9)%2)?0:1,b=f?1:0;
+  ctx.fillStyle='rgba(0,0,14,.45)';ctx.fillRect(x-5,y-1,10,2);
+  /* 氧气背包 */
+  ctx.fillStyle=SUIT2;ctx.fillRect(dir>0?x-7:x+4,y-15+b,3,9);
+  /* 腿 */
+  ctx.fillStyle=SUIT2;
+  if(f){ctx.fillRect(x-3,y-4,2,4);ctx.fillRect(x+1,y-3,2,3);}
+  else{ctx.fillRect(x-3,y-3,2,3);ctx.fillRect(x+1,y-4,2,4);}
+  ctx.fillStyle=SUITD;ctx.fillRect(x-4,y-1,3,1);ctx.fillRect(x+1,y-1,3,1);
+  /* 身体 */
+  ctx.fillStyle=SUIT;ctx.fillRect(x-4,y-14+b,8,11);
+  ctx.fillStyle='#5fe0c8';ctx.fillRect(x-1,y-12+b,2,1);
+  ctx.fillStyle='#ff4757';ctx.fillRect(x-3,y-10+b,1,1);
+  /* 手臂 */
+  ctx.fillStyle=SUIT;
+  if(arm>0){var aL=2+Math.round(arm*2);ctx.fillRect(dir>0?x+4:x-4-aL,y-13+b,aL,2);}
+  else{ctx.fillRect(x-6,y-13+b,2,6);ctx.fillRect(x+4,y-13+b,2,6);}
+  /* 头盔 + 面罩 */
+  ctx.fillStyle=SUIT;ctx.fillRect(x-5,y-22+b,10,9);ctx.fillRect(x-4,y-24+b,8,3);
+  ctx.fillStyle='#0d2436';ctx.fillRect(x-3,y-21+b,6,6);
+  ctx.fillStyle='#5fe0c8';ctx.fillRect(x-1,y-20+b,2,3);
+  ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillRect(x-3,y-21+b,1,1);
+  /* 长耳朵（穿出头盔） */
+  ctx.fillStyle=SUIT;ctx.fillRect(x-4,y-33+b,2,9);ctx.fillRect(x+2,y-33+b,2,9);
+  ctx.fillStyle='#ffb6c8';ctx.fillRect(x-4,y-31+b,2,5);ctx.fillRect(x+2,y-31+b,2,5);
+}
+function drawProjector(x,y,t){
+  x=Math.round(x);y=Math.round(y);
+  ctx.fillStyle='rgba(0,0,14,.45)';ctx.fillRect(x-10,y-1,20,2);
+  ctx.fillStyle='#2a3548';ctx.fillRect(x-9,y-15,18,15);
+  ctx.fillStyle='#3d4e66';ctx.fillRect(x-9,y-15,18,3);
+  ctx.fillStyle='#0d2436';ctx.fillRect(x+2,y-13,7,7);
+  ctx.globalAlpha=.5+.4*Math.sin(t*7);
+  ctx.fillStyle='#9feaff';ctx.fillRect(x+3,y-12,5,5);
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#ffd54f';ctx.fillRect(x-7,y-12,3,3);
+  ctx.fillStyle=(Math.sin(t*6)>0)?'#5fe0c8':'#1d5a52';ctx.fillRect(x-7,y-5,3,2);
+}
+function drawIntroScene(t){
+  var G=GAMES[intro.i],ph=intro.phase;
+  /* 行星表面：地平线亮带 + 地面压暗 + 地平线 */
+  var hg=ctx.createLinearGradient(0,LY-56,0,LY+30);
+  hg.addColorStop(0,'rgba(0,0,0,0)');
+  hg.addColorStop(.55,hexA(G.g,.20));
+  hg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=hg;ctx.fillRect(0,LY-56,W,88);
+  ctx.fillStyle='rgba(3,4,14,.42)';ctx.fillRect(0,LY+2,W,H-LY-2);
+  ctx.globalAlpha=.5;ctx.fillStyle=G.g;ctx.fillRect(0,LY,W,1);ctx.globalAlpha=1;
+  if(ph!=='chase')drawBase(BASE_X,LY,intro.doorOpen,t);
+  drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,t,ph==='chase'||ph==='descent');
+  if(ph==='meet'||ph==='panel'){
+    drawRabbit(intro.bx,intro.by,intro.walkPh,-1,intro.barm,t);
+    drawMouse(intro.mx,intro.my,intro.walkPh,1,intro.marm,t);
+    if(intro.clasp){
+      var jy=(Math.sin(t*22)>0)?0:-1;      /* 握手抖动 */
+      ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-13+jy,6,3);
+      ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-13+jy,2,1);
+    }
+    if(ph==='panel')drawProjector(CX+34,LY,t);
+  }
+}
+function drawIntroPanel(t){
+  if(intro.panel<=.02){intro.enterR=intro.likeR=intro.panelR=null;return;}
+  var G=GAMES[intro.i],a=ease(intro.panel);
+  /* 投影仪光束（打在面板下沿） */
+  var lx=CX+40,lyy=LY-20;
+  ctx.globalAlpha=.10*a;ctx.fillStyle=G.g;
+  ctx.beginPath();ctx.moveTo(lx,lyy);ctx.lineTo(PX+8,PY+PH);ctx.lineTo(PX+PW-8,PY+PH);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=.16*a;
+  ctx.beginPath();ctx.moveTo(lx,lyy);ctx.lineTo(PX+56,PY+PH);ctx.lineTo(PX+PW-56,PY+PH);ctx.closePath();ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.globalAlpha=a;
+  /* 面板底 + 扫描线 + 边框 + 四角 */
+  ctx.fillStyle='rgba(4,8,24,.94)';ctx.fillRect(PX,PY,PW,PH);
+  ctx.fillStyle='rgba(0,229,255,.055)';
+  for(var yy=PY+3;yy<PY+PH;yy+=3)ctx.fillRect(PX+1,yy,PW-2,1);
+  ctx.strokeStyle=hexA(G.g,.8);ctx.lineWidth=1;
+  ctx.strokeRect(PX+.5,PY+.5,PW-1,PH-1);
+  ctx.fillStyle=G.g;
+  ctx.fillRect(PX-1,PY-1,8,2);ctx.fillRect(PX-1,PY-1,2,7);
+  ctx.fillRect(PX+PW-7,PY-1,8,2);ctx.fillRect(PX+PW-1,PY-1,2,7);
+  ctx.fillRect(PX-1,PY+PH-1,8,2);ctx.fillRect(PX-1,PY+PH-7,2,7);
+  ctx.fillRect(PX+PW-7,PY+PH-1,8,2);ctx.fillRect(PX+PW-1,PY+PH-7,2,7);
+  /* 编号 + 类型 */
+  ctx.font=FB;ctx.textAlign='left';
+  ctx.fillStyle='rgba(255,213,79,.92)';ctx.fillText(G.no,28,PY+22);
+  ctx.fillStyle='rgba(150,215,255,.62)';
+  ctx.fillText('\u00b7  '+G.tag+(G.dev?'  \u00b7  DEV':''),28+ctx.measureText(G.no).width+4,PY+22);
+  /* 名称 */
+  ctx.font=FB16;ctx.fillStyle='#eafcff';
+  ctx.shadowColor='#00e5ff';ctx.shadowBlur=8;
+  ctx.fillText(G.t,28,PY+50);
+  ctx.shadowBlur=0;
+  /* 描述 */
+  ctx.font=FB;ctx.fillStyle='rgba(159,212,239,.92)';
+  var dl=wrapText(G.d,PW-28,2);
+  for(var i=0;i<dl.length;i++)ctx.fillText(dl[i],28,PY+76+i*17);
+  /* 进入游戏 */
+  var eb={x:PX+PW-152,y:PY+32,w:140,h:36};
+  ctx.fillStyle=hitRect(eb,mouseX,mouseY)?'#8cf6ff':'#00e5ff';
+  ctx.fillRect(eb.x,eb.y,eb.w,eb.h);
+  ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(eb.x,eb.y+eb.h-4,eb.w,4);
+  ctx.fillStyle='#03121e';ctx.textAlign='center';ctx.font=FB16;
+  ctx.fillText('\u8fdb\u5165\u6e38\u620f',eb.x+eb.w/2,eb.y+24);
+  ctx.textAlign='left';
+  /* 点赞计数 */
+  var lb={x:PX+PW-124,y:PY+12,w:112,h:24};
+  var liked=likeOn[G.key]||isLiked(G.key);
+  ctx.fillStyle=liked?'rgba(255,92,122,.22)':(hitRect(lb,mouseX,mouseY)?'rgba(255,110,140,.17)':'rgba(255,110,140,.07)');
+  ctx.fillRect(lb.x,lb.y,lb.w,lb.h);
+  ctx.strokeStyle=liked?'#ff5c7a':'rgba(255,110,140,.55)';ctx.lineWidth=1;
+  ctx.strokeRect(lb.x+.5,lb.y+.5,lb.w-1,lb.h-1);
+  var pop=likePop[G.key]||0;
+  drawHeart(lb.x+11,lb.y+8+(pop>0?-1:0),liked?'#ff5c7a':'#ff8ba0');
+  ctx.font=FB;ctx.fillStyle=liked?'#ffd0da':'#ffc2ce';
+  ctx.fillText(countText(likeCache[G.key]),lb.x+26,lb.y+17);
+  /* 跳过提示 */
+  ctx.fillStyle='rgba(150,215,255,.45)';
+  ctx.fillText('\u70b9\u51fb\u9762\u677f\u5916\u4efb\u610f\u5904\u8df3\u8fc7',28,PY+PH-8);
+  ctx.globalAlpha=1;
+  intro.enterR=eb;intro.likeR=lb;intro.panelR={x:PX,y:PY,w:PW,h:PH};
+}
+/* 选中游戏的信息条：画在星系下方（底部不再有 DOM 面板） */
+function drawInfoBlock(){
+  if(infoFade<=.01)return;
+  var G=GAMES[cur];
+  ctx.globalAlpha=infoFade;
+  ctx.fillStyle='rgba(0,229,255,.20)';ctx.fillRect(22,202,W-44,1);
+  ctx.font=FB;ctx.textAlign='left';
+  ctx.fillStyle='rgba(255,213,79,.9)';ctx.fillText(G.no,22,218);
+  ctx.fillStyle='rgba(150,215,255,.6)';
+  ctx.fillText('\u00b7  '+G.tag+(G.dev?'  \u00b7  DEV':''),22+ctx.measureText(G.no).width+4,218);
+  ctx.fillStyle='#eafcff';
+  ctx.shadowColor='#00e5ff';ctx.shadowBlur=7;
+  ctx.fillText(G.t,22,237);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(159,212,239,.9)';
+  var lines=wrapText(G.d,W-44,2);
+  for(var i=0;i<lines.length;i++)ctx.fillText(lines[i],22,253+i*14);
+  ctx.globalAlpha=1;
 }
 /* ←→ / 滑动：切换选中浏览 */
 function cycle(dir){
@@ -263,12 +561,10 @@ function cycle(dir){
   tick();renderInfo();
 }
 function applyDev(){
-  $('devToggle').classList.toggle('open',devMode);
   if(!visible(planets[cur]))cur=0;
   renderInfo();
   try{localStorage.setItem('ng-dev-open',devMode?'1':'0');}catch(e){}
 }
-$('devToggle').addEventListener('click',function(){audio();devMode=!devMode;applyDev();});
 
 /* 输入 */
 function toGame(e){var r=cv.getBoundingClientRect();
@@ -278,7 +574,16 @@ var sx0=null,sy0=null;
 cv.addEventListener('pointerdown',function(e){
   audio();
   var m=toGame(e),mx=m[0],my=m[1];mouseX=mx;mouseY=my;sx0=mx;sy0=my;
-  if(warp.active)return;
+  if(flash.active)return;
+  if(intro.active){
+    /* 面板阶段：进入游戏 / 点赞 / 面板内空白；面板外任意处 = 跳过 */
+    if(intro.phase==='panel'&&intro.panel>=1){
+      if(hitRect(intro.enterR,mx,my)){go();return;}
+      if(hitRect(intro.likeR,mx,my)){addLike(GAMES[intro.i].key);return;}
+      if(hitRect(intro.panelR,mx,my))return;
+    }
+    go();return;
+  }
   if(Math.abs(mx-rocket._x)<16&&my>rocket._y-24&&my<rocket._y+12){
     var now=performance.now();
     if(now-rocket.last>1600)rocket.clicks=0;
@@ -296,17 +601,18 @@ cv.addEventListener('pointerdown',function(e){
 cv.addEventListener('pointerup',function(e){
   if(sx0===null)return;
   var m=toGame(e),dx=m[0]-sx0,dy=m[1]-sy0;sx0=null;sy0=null;
-  if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)&&!warp.active)cycle(dx<0?1:-1);
+  if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)&&!intro.active&&!flash.active)cycle(dx<0?1:-1);
 });
 addEventListener('keydown',function(e){
   audio();
+  if(intro.active){
+    if(e.key==='Enter'||e.key===' ')go();   /* 面板阶段=进入，其他阶段=跳过 */
+    return;}
   if(e.key==='ArrowLeft')cycle(-1);
   else if(e.key==='ArrowRight')cycle(1);
-  else if(e.key==='Enter')launchWarp(cur);});
-$('gEnter').addEventListener('click',function(e){
-  if(warp.active)return;
-  if(REDUCED)return;
-  e.preventDefault();launchWarp(cur);});
+  else if(e.key==='Enter')launchWarp(cur);
+  else if(e.key==='r'||e.key==='R'||e.key==='d'||e.key==='D'){devMode=!devMode;applyDev();}
+});
 function boom(){rocket.salute=2.4;shakeT=REDUCED?0:.6;whitePop=REDUCED?0:.12;tone('sine',180,40,.45,.35);
   for(var i=0;i<80;i++){var a=rnd(0,TAU),sp=rnd(18,90);
     parts.push({x:rocket._x,y:rocket._y-8,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-12,
@@ -315,41 +621,52 @@ function boom(){rocket.salute=2.4;shakeT=REDUCED?0:.6;whitePop=REDUCED?0:.12;ton
 
 function update(dt,t){
   gdt=dt;
-  mox+=(clamp((mouseX-CX)*.05,-9,9)-mox)*Math.min(1,dt*6);
-  moy+=(clamp((mouseY-SY)*.04,-7,7)-moy)*Math.min(1,dt*6);
-  if(REDUCED){mox=0;moy=0;}
+  if(intro.active||REDUCED){mox=0;moy=0;}
+  else{
+    mox+=(clamp((mouseX-CX)*.05,-9,9)-mox)*Math.min(1,dt*6);
+    moy+=(clamp((mouseY-SY)*.04,-7,7)-moy)*Math.min(1,dt*6);
+  }
   rocket.hop=Math.max(0,rocket.hop-dt*2.4);
-  /* 行星公转 */
-  for(var i=0;i<planets.length;i++){var p=planets[i];
-    p.a+=p.sp*gdt;
-    var bx=CX+Math.cos(p.a)*ORBR[p.orbit],by=SPOTY+Math.sin(p.a)*ORBR[p.orbit]*.42;
-    if(warp.active&&warp.i===p.i){
-      bx+=(CX-bx)*warp.k;by+=(SY-by)*warp.k;}
-    p.x=bx;p.y=by;
-    p.pulse=Math.max(0,p.pulse-dt*2.5);}
-  /* 火箭：外圈轨道巡航，永远在飞 */
-  rocket.a+=.2*gdt*(REDUCED?.3:1)*(warp.active?2.5:1);
-  rocket.x=CX+Math.cos(rocket.a)*172;
-  rocket.y=SPOTY+Math.sin(rocket.a)*58;
-  /* 跃迁 */
-  if(warp.active){warp.t=Math.min(1,warp.t+dt/0.95);
-    warp.k=warp.t*warp.t;
-    var tp=planets[warp.i];
-    var rr=tp.r*(1+warp.k*26);
-    if(!flash.active&&rr>=300){flash.active=true;flash.t=.8;}}
+  if(!intro.active){
+    /* 行星公转（转场时冻结，保证着陆点稳定） */
+    for(var i=0;i<planets.length;i++){var p=planets[i];
+      p.a+=p.sp*gdt;
+      p.x=CX+Math.cos(p.a)*ORBR[p.orbit];
+      p.y=SPOTY+Math.sin(p.a)*ORBR[p.orbit]*SQUASH;
+      p.pulse=Math.max(0,p.pulse-dt*2.5);}
+    /* 行星重叠检测：与任意其他可见行星相交 → 前景改半透明，不再硬盖 */
+    for(var oi=0;oi<planets.length;oi++){var po=planets[oi];
+      var ov=false;
+      if(visible(po)){
+        for(var oj=0;oj<planets.length;oj++){
+          if(oi===oj)continue;
+          var pq=planets[oj];
+          if(!visible(pq))continue;
+          var ddx=po.x-pq.x,ddy=po.y-pq.y,rr=(po.r+pq.r)*.94;
+          if(ddx*ddx+ddy*ddy<rr*rr){ov=true;break;}}
+      }
+      po.ov=ov?.72:1;}
+    /* 火箭：外圈轨道巡航，永远在飞 */
+    rocket.a+=.2*gdt*(REDUCED?.3:1);
+    rocket.x=CX+Math.cos(rocket.a)*172;
+    rocket.y=SPOTY+Math.sin(rocket.a)*172*SQUASH;
+  }else{
+    introUpdate(dt);
+  }
   if(flash.active){flash.t-=dt;
-    if(flash.t<=0){flash.active=false;location.href=GAMES[warp.i].href;return;}}
-  if(warp.active&&!REDUCED){for(var w2=0;w2<wstars.length;w2++){var ws=wstars[w2];
-    ws.d+=ws.sp*gdt*(1+warp.k*2.5);
-    if(ws.d>320){ws.d=rnd(2,14);ws.a=rnd(0,TAU);ws.px=-999;ws.py=-999;}}}
-  /* 尾焰 */
-  var fb=warp.active?8:1.6;
-  flameAcc+=dt*26*fb;
-  while(flameAcc>=1){flameAcc--;
-    if(parts.length<420)parts.push({x:rocket.x+rnd(-2,2),y:rocket.y+9,
-      vx:rnd(-6,6),vy:rnd(26,46)+(warp.active?18:0),age:0,life:rnd(.2,.45),
-      s:Math.random()<.35?2:1,
-      c:Math.random()<.45?'#ffd54f':(Math.random()<.6?'#ffffff':'#ff4757')});}
+    if(flash.t<=0){flash.active=false;
+      if(intro.i>=0){location.href=GAMES[intro.i].href;return;}}}
+  infoFade=lerp(infoFade,intro.active?0:1,Math.min(1,dt*9));
+  for(var lk in likePop)if(likePop[lk]>0)likePop[lk]=Math.max(0,likePop[lk]-dt*2);
+  /* 尾焰（转场里由降落器自己画） */
+  if(!intro.active){
+    flameAcc+=dt*26*1.6;
+    while(flameAcc>=1){flameAcc--;
+      if(parts.length<420)parts.push({x:rocket.x+rnd(-2,2),y:rocket.y+9,
+        vx:rnd(-6,6),vy:rnd(26,46),age:0,life:rnd(.2,.45),
+        s:Math.random()<.35?2:1,
+        c:Math.random()<.45?'#ffd54f':(Math.random()<.6?'#ffffff':'#ff4757')});}
+  }
   for(var pi=parts.length-1;pi>=0;pi--){var q=parts[pi];
     q.age+=dt;if(q.age>=q.life){parts.splice(pi,1);continue;}
     q.x+=q.vx*dt;q.y+=q.vy*dt;q.vx*=1-1.4*dt;q.vy*=1-1.4*dt;}
@@ -358,33 +675,42 @@ function update(dt,t){
 }
 
 function drawStars(t){
+  var sk=intro.active?intro.starK:1;   /* 俯冲时星场向外拉开 */
   for(var i=0;i<stars.length;i++){var s=stars[i];
-    var x=CX+Math.cos(s.a)*s.d+mox*s.par,y=SY+Math.sin(s.a)*s.d*.78+moy*s.par;
+    var x=CX+Math.cos(s.a)*s.d*sk+mox*s.par,y=SY+Math.sin(s.a)*s.d*.78*sk+moy*s.par;
     var a=REDUCED?.6:(.3+.7*Math.pow(Math.sin(t*s.tw+s.ph)*.5+.5,2));
-    x=((x%W)+W)%W;y=((y%H)+H)%H;
+    if(!intro.active){x=((x%W)+W)%W;y=((y%H)+H)%H;}
     ctx.globalAlpha=a;ctx.fillStyle=s.c;
     ctx.fillRect(x|0,y|0,s.s,s.s);}
   ctx.globalAlpha=1;
 }
 function drawOrbits(){
+  /* 相机拉近时轨线会变成粗带，z>1.7 前淡出 */
+  var z=intro.active?intro.camZ:1;
+  var f=intro.active?clamp((1.7-z)/.7,0,1):1;
+  if(f<=.01)return;
   for(var o=0;o<3;o++){
-    ctx.globalAlpha=.15;ctx.strokeStyle='#4fc3ff';ctx.lineWidth=1;
-    ctx.beginPath();ctx.ellipse(CX,SPOTY,ORBR[o],ORBR[o]*.42,0,0,TAU);ctx.stroke();}
-  ctx.globalAlpha=.2;ctx.strokeStyle='#ffd54f';ctx.lineWidth=1;
-  ctx.beginPath();ctx.ellipse(CX,SPOTY,168,72,0,0,TAU);ctx.stroke();
+    ctx.globalAlpha=.15*f;ctx.strokeStyle='#4fc3ff';ctx.lineWidth=1*worldLW;
+    ctx.beginPath();ctx.ellipse(CX,SPOTY,ORBR[o],ORBR[o]*SQUASH,0,0,TAU);ctx.stroke();}
+  ctx.globalAlpha=.2*f;ctx.strokeStyle='#ffd54f';ctx.lineWidth=1*worldLW;
+  ctx.beginPath();ctx.ellipse(CX,SPOTY,172,172*SQUASH,0,0,TAU);ctx.stroke();
   ctx.globalAlpha=1;
 }
 function drawStarCore(t){
+  var z=intro.active?intro.camZ:1;
+  var f=intro.active?clamp((3-z)/2,0,1):1;
+  if(f<=.01)return;
   var breath=.5+.5*Math.sin(t*1.8);
   var r=13*(1+.06*breath);
   var g=ctx.createRadialGradient(CX,SY,0,CX,SY,r*2.6);
   g.addColorStop(0,'#ffffff');
   g.addColorStop(.3,'#ffd54f');
   g.addColorStop(1,'rgba(255,213,79,0)');
-  ctx.globalAlpha=.9;ctx.fillStyle=g;
+  ctx.globalAlpha=.9*f;ctx.fillStyle=g;
   ctx.beginPath();ctx.arc(CX,SY,r*2.6,0,TAU);ctx.fill();
   ctx.globalAlpha=1;
-  ctx.font='12px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+  if(intro.active)return;
+  ctx.font=FB;
   ctx.textAlign='center';
   ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText('鼠哥游戏厅',CX+1,SY+27);
   ctx.fillStyle='#ffd54f';ctx.fillText('鼠哥游戏厅',CX,SY+26);
@@ -393,39 +719,49 @@ function drawStarCore(t){
 function drawPlanet(p,t){
   var G=p.g;
   var sel=p.i===cur;
-  var warpK=(warp.active&&warp.i===p.i)?warp.k:0;
-  var r=p.r*(1+.1*p.pulse)*(1+warpK*26);
+  var z=intro.active?intro.camZ:1;
+  var isT=intro.active&&intro.i===p.i;
+  /* 转场时非目标行星快速淡出（否则放大后会变成大白块） */
+  var fade=intro.active?(isT?1:clamp((2.6-z)/1.5,0,1)):1;
+  if(fade<=.01)return;
+  var ov=p.ov||1;
+  var r=p.r*(1+.1*p.pulse);
   var x=p.x|0,y=p.y|0;
   var breath=.5+.5*Math.sin(t*2.2+p.i);
-  var fade=warp.active&&warp.i!==p.i?1-warp.k:1;
+  var glow=intro.active?clamp((3.2-z)/2.2,0,1):1;
   /* 大气辉光 */
-  var L=[[2,.13],[5,.07],[9,.04]];
-  for(var li=0;li<L.length;li++){
-    ctx.globalAlpha=L[li][1]*(.75+.45*breath)*(sel?1.5:1)*fade;
-    ctx.strokeStyle=G.g;ctx.lineWidth=2;
-    ctx.beginPath();ctx.arc(x,y,r+L[li][0],0,TAU);ctx.stroke();}
+  if(glow>.02){
+    var L=[[2,.13],[5,.07],[9,.04]];
+    for(var li=0;li<L.length;li++){
+      ctx.globalAlpha=L[li][1]*(.75+.45*breath)*(sel?1.5:1)*fade*ov*glow;
+      ctx.strokeStyle=G.g;ctx.lineWidth=2*worldLW;
+      ctx.beginPath();ctx.arc(x,y,r+L[li][0],0,TAU);ctx.stroke();}
+  }
   /* 球体 */
-  ctx.globalAlpha=fade;
+  ctx.globalAlpha=fade*ov;
   var g=ctx.createRadialGradient(x-r*.38,y-r*.42,r*.1,x,y,r*1.02);
   g.addColorStop(0,shade(G.c,.5));
   g.addColorStop(.52,G.c);
   g.addColorStop(1,shade(G.c,-.55));
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,'+(.38*(1-warpK*.5))+')';
+  ctx.fillStyle='rgba(255,255,255,.38)';
   ctx.beginPath();ctx.ellipse(x-r*.42,y-r*.45,r*.16,r*.1,-.6,0,TAU);ctx.fill();
-  var sh2=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.3,x,y,r*1.25);
-  sh2.addColorStop(0,'rgba(0,0,12,0)');sh2.addColorStop(1,'rgba(0,0,12,.55)');
-  ctx.fillStyle=sh2;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
-  if(G.ring&&warpK<.6){
+  var shA=.55*(intro.active?clamp((4-z)/3,0,1):1);
+  if(shA>.02){
+    var sh2=ctx.createRadialGradient(x-r*.3,y-r*.3,r*.3,x,y,r*1.25);
+    sh2.addColorStop(0,'rgba(0,0,12,0)');sh2.addColorStop(1,'rgba(0,0,12,'+shA+')');
+    ctx.fillStyle=sh2;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+  }
+  if(G.ring&&!intro.active){
     var rx=r*1.5,ry=r*.42,tl=-.22;
-    ctx.lineWidth=2;
-    ctx.strokeStyle=hexA(G.g,.5*fade);
+    ctx.lineWidth=2*worldLW;
+    ctx.strokeStyle=hexA(G.g,.5*fade*ov);
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,Math.PI,TAU);ctx.stroke();
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,0,Math.PI);ctx.stroke();}
-  /* 常显名字 */
-  if(r>6&&warpK<.5){
-    ctx.globalAlpha=.9*fade;
-    ctx.font='12px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+  /* 常显名字（转场放大时不画） */
+  if(r>6&&!intro.active){
+    ctx.globalAlpha=.9*fade*ov;
+    ctx.font=FB;
     ctx.textAlign='center';
     ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,x+1,y+r+12);
     ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,x,y+r+11);
@@ -434,16 +770,14 @@ function drawPlanet(p,t){
 }
 function drawRocket(t){
   var bob=REDUCED?0:Math.sin(t*2.1)*1.6;
-  var jit=warp.active?rnd(-.8,.8):0;
   var hopY=rocket.hop>0?-Math.sin((1-rocket.hop)*Math.PI)*3.2:0;
-  var fade=warp.active?1-warp.k*.8:1;
-  var x=(rocket.x+jit)|0,y=(rocket.y+bob+hopY+jit*.5)|0;
+  var x=rocket.x|0,y=(rocket.y+bob+hopY)|0;
   rocket._x=x;rocket._y=y;
-  ctx.globalAlpha=fade;
+  ctx.globalAlpha=1;
   ctx.strokeStyle='rgba(207,216,220,.85)';ctx.lineWidth=1;
   var tw=Math.sin(t*3.2)*2;
   ctx.beginPath();ctx.moveTo(x+6,y-1);ctx.quadraticCurveTo(x+13+tw,y+3,x+11+tw*.6,y+9);ctx.stroke();
-  var fl=6+Math.sin(t*31)*1.5+(warp.active?7:0);
+  var fl=6+Math.sin(t*31)*1.5;
   ctx.fillStyle='#ffd54f';ctx.fillRect(x-2,y+6,4,3);
   ctx.fillStyle='rgba(255,213,79,.55)';ctx.fillRect(x-1,y+9,2,fl|0);
   ctx.fillStyle='#ffffff';ctx.fillRect(x-1,y+6,2,2);
@@ -483,19 +817,12 @@ function drawParts(){
     ctx.fillRect(q.x|0,q.y|0,s,s);}
   ctx.globalAlpha=1;
 }
-function drawTunnel(){
-  for(var i=0;i<wstars.length;i++){var ws=wstars[i];
-    var x=CX+Math.cos(ws.a)*ws.d,y=SY+Math.sin(ws.a)*ws.d*.78;
-    var dx=x-ws.px,dy=y-ws.py;
-    ctx.globalAlpha=.7;ctx.strokeStyle=i%3?'#ffffff':'#00e5ff';ctx.lineWidth=1;
-    if(dx*dx+dy*dy>4){ctx.beginPath();ctx.moveTo(ws.px,ws.py);ctx.lineTo(x,y);ctx.stroke();}
-    else ctx.fillRect(x|0,y|0,1,1);
-    ws.px=x;ws.py=y;}
-  ctx.globalAlpha=1;
-}
 function render(t){
   ctx.setTransform(1,0,0,1,0,0);
-  if(shakeT>0)ctx.translate(rnd(-3,3)*shakeT*2,rnd(-3,3)*shakeT*2);
+  var shX=0,shY=0;
+  if(shakeT>0){shX=rnd(-3,3)*shakeT*2;shY=rnd(-3,3)*shakeT*2;}
+  worldLW=intro.active?1/intro.camZ:1;   /* 世界层的线宽换算成屏幕 1px */
+  ctx.setTransform(1,0,0,1,shX,shY);
   ctx.fillStyle=bgGrad;ctx.fillRect(-8,-8,W+16,H+16);
   for(var i=0;i<nebula.length;i++){ctx.fillStyle=nebula[i];ctx.fillRect(0,0,W,H);}
   ctx.save();ctx.translate(CX,SY);ctx.rotate(-.28);
@@ -516,33 +843,43 @@ function render(t){
     ctx.fillRect(bx-4,by,3,1);ctx.fillRect(bx+2,by,3,1);
     ctx.fillRect(bx,by-4,1,3);ctx.fillRect(bx,by+2,1,3);}
   ctx.globalAlpha=1;
-  if(false)drawTunnel();
+  /* ---- 世界层（转场时相机俯冲进目标行星） ---- */
+  ctx.save();
+  camApply(shX,shY);
   drawOrbits();
   /* 伪 3D 排序：远（y 小）先画，恒星夹在中间层 */
   var order=planets.filter(visible).slice().sort(function(a,b){return a.y-b.y;});
-  if(warp.active){var wi=order.indexOf(planets[warp.i]);
-    if(wi>=0){order.splice(wi,1);order.push(planets[warp.i]);}}
+  if(intro.active){var ti=order.indexOf(planets[intro.i]);
+    if(ti>=0){order.splice(ti,1);order.push(planets[intro.i]);}}
   var starDrawn=false;
   for(var oi=0;oi<order.length;oi++){
     if(!starDrawn&&order[oi].y>=SY){drawStarCore(t);starDrawn=true;}
     drawPlanet(order[oi],t);}
   if(!starDrawn)drawStarCore(t);
-  drawRocket(t);
-  drawParts();
+  ctx.restore();
+  ctx.setTransform(1,0,0,1,shX,shY);
+  /* ---- 前景 ---- */
+  if(intro.active){
+    drawIntroScene(t);
+    drawParts();
+    drawIntroPanel(t);
+  }else{
+    drawRocket(t);
+    drawParts();
+  }
+  /* 选中项信息条（画进 canvas，底部不再有 DOM 面板） */
+  drawInfoBlock();
+  /* ---- 后处理 ---- */
   ctx.setTransform(1,0,0,1,0,0);
   ctx.fillStyle=vign;ctx.fillRect(0,0,W,H);
   if(whitePop>0){ctx.fillStyle='rgba(255,255,255,'+(whitePop/.12*.5)+')';ctx.fillRect(0,0,W,H);}
-  if(warp.active){
-    var cg=ctx.createRadialGradient(CX,SY,0,CX,SY,90+warp.k*70);
-    cg.addColorStop(0,'rgba(200,245,255,0)');
-    cg.addColorStop(1,'rgba(200,245,255,0)');
-    ctx.fillStyle=cg;ctx.fillRect(0,0,W,H);}
-  if(flash.active){var fa=1-clamp(flash.t/.5,0,1);   /* 渐黑收场 */
-    ctx.fillStyle='rgba(2,3,10,'+fa+')';ctx.fillRect(0,0,W,H);}
+  if(flash.active){var fa=1-clamp(flash.t/flash.dur,0,1);   /* 渐黑收场 */
+    ctx.fillStyle='rgba(2,3,10,'+fa.toFixed(3)+')';ctx.fillRect(0,0,W,H);}
 }
 renderInfo();
 applyDev();
-if(IS_TOUCH)$('hint').textContent='点行星直接跃迁进入游戏 · 左右滑动浏览 · NDSHUGE © 2026';
+$('hint').textContent=IS_TOUCH?'点行星降落 → 兔子介绍 · 左右滑动浏览 · NDSHUGE © 2026'
+  :'点行星降落 → 兔子介绍 · ← → 浏览 · R/D 开发者模式 · NDSHUGE © 2026';
 
 var last=performance.now();
 function frame(now){

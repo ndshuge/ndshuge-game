@@ -842,9 +842,14 @@
     PG.UI.updateHud(this);
   };
 
-  /* Light mutual separation so a pack reads as a pack instead of one sprite. */
+  /* Light mutual separation so a pack reads as a pack instead of one sprite.
+     Runs every other frame and nudges positions directly: routing each nudge
+     through tile collision made a full screen of elites cost hundreds of thousands
+     of tile lookups per frame, which was the visible stutter. */
   Game.prototype.separateEnemies = function () {
     var list = this.enemies;
+    this._sepFrame = (this._sepFrame || 0) + 1;
+    if (this._sepFrame % 2) return;
     for (var i = 0; i < list.length; i++) {
       var a = list[i];
       if (a.dead || a.spawnT > 0) continue;
@@ -858,8 +863,8 @@
         var d = Math.sqrt(d2);
         var push = (min - d) * 0.5;
         var ux = dx / d, uy = dy / d;
-        PG.moveCircle(this.world, a, -ux * push, -uy * push);
-        PG.moveCircle(this.world, b, ux * push, uy * push);
+        a.x -= ux * push; a.y -= uy * push;
+        b.x += ux * push; b.y += uy * push;
       }
     }
   };

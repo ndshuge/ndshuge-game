@@ -47,7 +47,11 @@
   function build() {
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return false;
-    ctx = new AC({ latencyHint: 'interactive' });
+    try {
+      ctx = new AC({ latencyHint: 'interactive' });
+    } catch (e) {
+      return false;
+    }
 
     master = ctx.createGain();
     master.gain.value = muted ? 0 : VOLUME;
@@ -72,9 +76,14 @@
     return true;
   }
 
+  var buildFailed = false;
+
   function ensure() {
     if (muted) return false;
-    if (!ctx && !build()) return false;
+    /* Never retry a failed build every frame: on some mobile browsers the
+       constructor throws, and rethrowing 60 times a second is itself the lag. */
+    if (buildFailed) return false;
+    if (!ctx && !build()) { buildFailed = true; return false; }
     if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
     return true;
   }
