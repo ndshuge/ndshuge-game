@@ -34,6 +34,7 @@
     this.hostiles = new PG.Projectiles();
     this.heartTimer = 0.6;
     this.lastShakeAt = -1;
+    this.flowTimer = 0;
 
     this.vignette = null;
     this.records = { bestTime: 0, bestLevel: 1, bestKills: 0 };
@@ -85,6 +86,8 @@
     this.hostiles.clear();
     this.heartTimer = 0.6;
     this.lastShakeAt = -1;
+    this.flowTimer = 0;
+    this.world.buildFlow(cx, cy);
 
     /* Opening crowd. Three was too thin to read as a threat: with the first wave also
        waiting 1.2s, the first second or two were effectively an empty arena. Five
@@ -790,6 +793,15 @@
     if (this.player.dead) { this.onPlayerDeath(); return; }
 
     this.player.update(dt, this);
+
+    /* Rebuild the shared flow field before the horde reads it. Once per 0.25s, and
+       only while playing: one BFS pass serves every enemy, so this stays cheap even
+       with a full screen of them. */
+    this.flowTimer -= dt;
+    if (this.flowTimer <= 0) {
+      this.flowTimer = 0.25;
+      this.world.buildFlow(this.player.x, this.player.y);
+    }
 
     for (var i = 0; i < this.enemies.length; i++) {
       this.enemies[i].update(dt, this);

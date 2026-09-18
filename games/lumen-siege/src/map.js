@@ -31,6 +31,10 @@
     this.w = PG.WORLD_W;
     this.h = PG.WORLD_H;
     this.tiles = new Uint8Array(this.tw * this.th);
+    /* flow field: steps to the player per tile, plus the BFS queue. Both are plain
+       typed arrays so a rebuild does not allocate. */
+    this.flow = new Int32Array(this.tw * this.th);
+    this.flowQueue = new Int32Array(this.tw * this.th);
     this.rng = new PG.Rng(1);
     this.ground = null;
   }
@@ -53,7 +57,14 @@
 
   /* ---------- generation ---------- */
 
+  /*: Obstacle clusters. Kept low on purpose: the arena reads better open, and a
+     sparse map is also what makes pathfinding around rocks legible instead of
+     turning every fight into a corridor. */
+  var CLUSTER_COUNT = 42;
+  var PILLAR_COUNT = 3;
+
   World.prototype.generate = function (seed) {
+    this.flow.fill(-1);
     this.rng = new PG.Rng(seed >>> 0);
     this.tiles.fill(EMPTY);
 
@@ -68,7 +79,7 @@
 
     /* obstacle clusters: rocks placed as 2x2 blocks, never on top of the arena centre */
     var cx = tw >> 1, cy = th >> 1;
-    var clusters = 150;
+    var clusters = CLUSTER_COUNT;
     var attempts = 0;
     var placed = 0;
     while (placed < clusters && attempts < clusters * 12) {
@@ -97,8 +108,8 @@
       placed++;
     }
 
-    /* a handful of deliberate pillars, so the map has landmarks */
-    for (i = 0; i < 6; i++) {
+    /* a few deliberate pillars, so the map has landmarks */
+    for (i = 0; i < PILLAR_COUNT; i++) {
       var px = this.rng.int(10, tw - 10), py = this.rng.int(10, th - 10);
       if (PG.dist(px, py, cx, cy) < 9) continue;
       for (y = 0; y < 3; y++) {
@@ -195,6 +206,102 @@
 
     this.ground = c;
     return c;
+  };
+
+  /* ---------- flow field ----------
+     One breadth-first pass from the player fills a step count for every walkable
+     tile, and every enemy reads a direction out of it. That is the whole point: one
+     cheap pass shared by the whole horde, instead of a search per body per frame. */
+
+  World.prototype.buildFlow = function (targetPx, targetPy) {
+    var tw = this.tw, th = this.th;
+    var flow = this.flow;
+    var queue = this.flowQueue;
+    flow.fill(-1);
+
+    var tx = PG.clamp(Math.floor(targetPx / PG.TILE), 0, tw - 1);
+    var ty = PG.clamp(Math.floor(targetPy / PG.TILE), 0, th - 1);
+    /* the player can stand on a rock-corner: nudge to a walkable tile */
+    if (this.isSolid(tx, ty)) {
+      var found = false;
+      for (var r = 1; r <= 3 && !found; r++) {
+        for (var oy = -r; oy <= r && !found; oy++) {
+          for (var ox = -r; ox <= r; ox++) {
+            if (!this.isSolid(tx + ox, ty + oy)) { tx += ox; ty += oy; found = true; break; }
+          }
+        }
+      }
+      if (!found) return;
+    }
+
+    var head = 0, tail = 0;
+    var start = ty * tw + tx;
+    flow[start] = 0;
+    queue[tail++] = start;
+
+    while (head < tail) {
+      var idx = queue[head++];
+      var step = flow[idx] + 1;
+      var x = idx % tw;
+      var y = (idx / tw) | 0;
+      for (var dy = -1; dy <= 1; dy++) {
+        var ny = y + dy;
+        if (ny < 0 || ny >= th) continue;
+        for (var dx = -1; dx <= 1; dx++) {
+          if (!dx && !dy) continue;
+          var nx = x + dx;
+          if (nx < 0 || nx >= tw) continue;
+          var n = ny * tw + nx;
+          if (flow[n] !== -1) continue;
+          /* EMPTY, not PG.TILE_EMPTY: that export was removed when the tile-type
+             constants were cleaned up, and referencing it here made the test always
+             true, so the whole field came out empty. */
+          if (this.tiles[n] !== EMPTY) continue;
+          /* no diagonal squeeze through a corner */
+          if (dx && dy && (this.isSolid(x + dx, y) || this.isSolid(x, y + dy))) continue;
+          flow[n] = step;
+          queue[tail++] = n;
+        }
+      }
+    }
+  };
+
+  /*: Direction to step from a world point toward the player, or null. Reads the
+     field built by buildFlow, so it is a table lookup, not a search. */
+  World.prototype.flowDir = function (px, py) {
+    var tw = this.tw;
+    var x = Math.floor(px / PG.TILE);
+    var y = Math.floor(py / PG.TILE);
+    if (x < 0 || y < 0 || x >= tw || y >= this.th) return null;
+    var here = this.flow[y * tw + x];
+    if (here < 0) {
+      /* standing in a rock: step to any open neighbour, preferring the closest in */
+      for (var dy0 = -1; dy0 <= 1; dy0++) {
+        for (var dx0 = -1; dx0 <= 1; dx0++) {
+          if (!dx0 && !dy0) continue;
+          if (this.isSolid(x + dx0, y + dy0)) continue;
+          if (this.flow[(y + dy0) * tw + (x + dx0)] >= 0) {
+            return Math.atan2(dy0, dx0);
+          }
+        }
+      }
+      return null;
+    }
+    var best = null, bestD = here;
+    for (var dy = -1; dy <= 1; dy++) {
+      var ny = y + dy;
+      if (ny < 0 || ny >= this.th) continue;
+      for (var dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        var nx = x + dx;
+        if (nx < 0 || nx >= tw) continue;
+        if (this.isSolid(nx, ny)) continue;
+        if (dx && dy && (this.isSolid(x + dx, y) || this.isSolid(x, y + dy))) continue;
+        var d = this.flow[ny * tw + nx];
+        if (d >= 0 && d < bestD) { bestD = d; best = Math.atan2(dy, dx); }
+      }
+    }
+    return best;
   };
 
   /* ---------- collision ---------- */

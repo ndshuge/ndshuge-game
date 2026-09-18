@@ -994,6 +994,73 @@ check('time stop only rolls for direct hits, never for shards', () => {
   return 'direct hits roll once, shards and unnamed sources never do';
 });
 
+check('the arena is open, and the flow field reaches every corner of it', () => {
+  game.newRun();
+  const w = game.world;
+
+  /* obstacle density: sparse on purpose, so fights happen in the open and detours
+     are legible rather than a maze */
+  let solid = 0, open = 0;
+  for (let ty = 2; ty < w.th - 2; ty++) {
+    for (let tx = 2; tx < w.tw - 2; tx++) {
+      if (w.isSolid(tx, ty)) solid++; else open++;
+    }
+  }
+  const density = solid / (solid + open);
+  assert(density < 0.14, `interior obstacle density is ${(density * 100).toFixed(1)}%`);
+
+  /* the field must reach essentially every walkable tile, or bodies will sit still
+     against a rock they cannot see a way around */
+  let reachable = 0, walkable = 0;
+  for (let ty = 0; ty < w.th; ty++) {
+    for (let tx = 0; tx < w.tw; tx++) {
+      if (w.isSolid(tx, ty)) continue;
+      walkable++;
+      if (w.flow[ty * w.tw + tx] >= 0) reachable++;
+    }
+  }
+  assert(walkable > 1000, `only ${walkable} walkable tiles`);
+  assert(reachable / walkable > 0.95,
+    `the flow field only reaches ${(reachable / walkable * 100).toFixed(1)}% of walkable tiles`);
+  return `density ${(density * 100).toFixed(1)}%, reachable ${(reachable / walkable * 100).toFixed(1)}%`;
+});
+
+check('an enemy behind a rock walks around it instead of grinding', () => {
+  game.newRun();
+  /* find a rock with open space on both sides: the straight line is blocked */
+  let rock = null;
+  for (let ty = 6; ty < game.world.th - 6 && !rock; ty++) {
+    for (let tx = 6; tx < game.world.tw - 6; tx++) {
+      if (!game.world.isSolid(tx, ty)) continue;
+      if (game.world.isSolid(tx - 2, ty) || game.world.isSolid(tx + 2, ty)) continue;
+      rock = { tx, ty };
+      break;
+    }
+  }
+  assert(rock, 'the generated map had no suitable rock');
+
+  const T = PG.TILE;
+  const px = (rock.tx - 2) * T + T / 2;
+  const py = rock.ty * T + T / 2;
+  const ex = (rock.tx + 2) * T + T / 2;
+  const ey = rock.ty * T + T / 2;
+
+  game.enemies.length = 0;
+  const e = game.addEnemy('crawler', ex, ey, false);
+  e.spawnT = 0;
+
+  let closest = PG.dist(e.x, e.y, px, py);
+  for (let i = 0; i < 60 * 12; i++) {
+    game.update(1 / 60);
+    PG.Input.endFrame();
+    /* hold the player still: this is purely a pathing test */
+    game.player.x = px; game.player.y = py;
+    closest = Math.min(closest, PG.dist(e.x, e.y, px, py));
+  }
+  assert(closest < 30, `the enemy never got around the rock (closest ${closest.toFixed(0)}px)`);
+  return `blocked line, closed to ${closest.toFixed(0)}px within 12s`;
+});
+
 check('death ends the run and writes records to storage', () => {
   /* clear any queued level-ups first, or the run is sitting on an upgrade screen */
   game.pendingLevelUps = 0;

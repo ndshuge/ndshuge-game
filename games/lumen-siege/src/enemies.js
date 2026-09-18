@@ -146,14 +146,45 @@
     }
   };
 
+  /* ---------- movement ---------- */
+
+  /* Walk toward a point, around obstacles when there is one in the way.
+
+     Straight line first: that is what keeps a chase looking natural. Only when the
+     direct step is actually blocked does the body consult the shared flow field,
+     which was built once for the player's position. Following the field all the time
+     would make every enemy in a wave walk the same line. */
+  Enemy.prototype.seekPlayer = function (dt, game, speed) {
+    var p = game.player;
+    var direct = Math.atan2(p.y - this.y, p.x - this.x);
+    var budget = speed * dt;
+    this.angle = direct;
+    if (this.stepAlong(game, direct, budget) < budget * 0.45) {
+      var detour = game.world.flowDir(this.x, this.y);
+      if (detour !== null) {
+        this.angle = detour;
+        this.stepAlong(game, detour, budget);
+      }
+    }
+  };
+
+  /* Move one step and report how far the body actually got. */
+  Enemy.prototype.stepAlong = function (game, angle, distance) {
+    var bx = this.x, by = this.y;
+    PG.moveCircle(game.world, this, Math.cos(angle) * distance, Math.sin(angle) * distance);
+    return Math.abs(this.x - bx) + Math.abs(this.y - by);
+  };
+
   /* ---------- behaviours ---------- */
 
   Enemy.prototype.updateCrawler = function (dt, game) {
     var p = game.player;
     var weave = Math.sin(this.t * 3.1 + this.phase) * 0.42;
-    this.angle = Math.atan2(p.y - this.y, p.x - this.x) + weave;
     var s = this.speed * this.speedMul * (1 + Math.sin(this.t * 6 + this.phase) * 0.08);
-    PG.moveCircle(game.world, this, Math.cos(this.angle) * s * dt, Math.sin(this.angle) * s * dt);
+    /* the weave is applied on top of the seek direction, not instead of it */
+    this.seekPlayer(dt, game, s);
+    this.angle += weave;
+    this.stepAlong(game, this.angle, s * dt * 0.75);
   };
 
   Enemy.prototype.updateZipper = function (dt, game) {
@@ -161,11 +192,8 @@
     this.stateT -= dt;
 
     if (this.state === 'approach') {
-      var a = Math.atan2(p.y - this.y, p.x - this.x);
-      this.angle = a;
-      var zs = this.speed * this.speedMul;
-      PG.moveCircle(game.world, this, Math.cos(a) * zs * dt, Math.sin(a) * zs * dt);
       var d = PG.dist(this.x, this.y, p.x, p.y);
+      this.seekPlayer(dt, game, this.speed * this.speedMul);
       if (d < 115 && this.stateT <= 0) {
         this.state = 'wind';
         this.stateT = 0.42;
@@ -199,18 +227,18 @@
   /* Refuses to close in: holds a ring at `keep` and lobs acid over it. */
   Enemy.prototype.updateSpitter = function (dt, game) {
     var p = game.player;
-    var a = Math.atan2(p.y - this.y, p.x - this.x);
     var d = PG.dist(this.x, this.y, p.x, p.y);
+    var a = Math.atan2(p.y - this.y, p.x - this.x);
     this.angle = a;
     var s = this.speed * this.speedMul;
 
     if (d > this.def.keep + 24) {
-      PG.moveCircle(game.world, this, Math.cos(a) * s * dt, Math.sin(a) * s * dt);
+      this.seekPlayer(dt, game, s);
     } else if (d < this.def.keep - 24) {
-      PG.moveCircle(game.world, this, -Math.cos(a) * s * dt, -Math.sin(a) * s * dt);
+      this.stepAlong(game, Math.atan2(this.y - p.y, this.x - p.x), s * dt);
     } else {
       var side = a + Math.PI / 2 * (this.phase > Math.PI ? 1 : -1);
-      PG.moveCircle(game.world, this, Math.cos(side) * s * 0.7 * dt, Math.sin(side) * s * 0.7 * dt);
+      this.stepAlong(game, side, s * 0.7 * dt);
     }
 
     this.fireT -= dt;
@@ -249,9 +277,9 @@
     this.angle = a;
     var s = this.speed * this.speedMul;
     if (d > 120) {
-      PG.moveCircle(game.world, this, Math.cos(a) * s * dt, Math.sin(a) * s * dt);
+      this.seekPlayer(dt, game, s);
     } else if (d < 84) {
-      PG.moveCircle(game.world, this, -Math.cos(a) * s * dt, -Math.sin(a) * s * dt);
+      this.stepAlong(game, Math.atan2(this.y - p.y, this.x - p.x), s * dt);
     }
 
     this.fireT -= dt;
@@ -267,7 +295,10 @@
     var target = Math.atan2(p.y - this.y, p.x - this.x);
     this.angle += PG.angleDelta(this.angle, target) * Math.min(1, dt * 1.1);
     var s = this.speed * this.speedMul;
-    PG.moveCircle(game.world, this, Math.cos(this.angle) * s * dt, Math.sin(this.angle) * s * dt);
+    if (this.stepAlong(game, this.angle, s * dt) < s * dt * 0.45) {
+      var detour = game.world.flowDir(this.x, this.y);
+      if (detour !== null) this.stepAlong(game, detour, s * dt);
+    }
   };
 
   /* Immobile, so it never chases: it denies an area and forces the player to spend
@@ -293,15 +324,20 @@
     this.angle += PG.angleDelta(this.angle, target) * Math.min(1, dt * 2.4);
     var enraged = this.hp < this.maxHp * 0.5;
     var s = this.speed * this.speedMul * (enraged ? 1.4 : 1);
-    PG.moveCircle(game.world, this, Math.cos(this.angle) * s * dt, Math.sin(this.angle) * s * dt);
+    /* lazy turning, but still willing to go around: without this a slab parked
+       itself against a rock and never arrived */
+    if (this.stepAlong(game, this.angle, s * dt) < s * dt * 0.45) {
+      var detour = game.world.flowDir(this.x, this.y);
+      if (detour !== null) this.stepAlong(game, detour, s * dt);
+    }
   };
 
   Enemy.prototype.updateSplitter = function (dt, game) {
-    var p = game.player;
-    var a = Math.atan2(p.y - this.y, p.x - this.x) + Math.sin(this.t * 2.2 + this.phase) * 0.2;
-    this.angle = a;
+    var a = Math.sin(this.t * 2.2 + this.phase) * 0.2;
     var s = this.speed * this.speedMul;
-    PG.moveCircle(game.world, this, Math.cos(a) * s * dt, Math.sin(a) * s * dt);
+    this.seekPlayer(dt, game, s);
+    this.angle += a;
+    this.stepAlong(game, this.angle, s * dt * 0.8);
   };
 
   /* Walks straight at you and never turns: front armour means circling it. */
@@ -310,7 +346,10 @@
     var target = Math.atan2(p.y - this.y, p.x - this.x);
     this.angle += PG.angleDelta(this.angle, target) * Math.min(1, dt * 3.0);
     var s = this.speed * this.speedMul;
-    PG.moveCircle(game.world, this, Math.cos(this.angle) * s * dt, Math.sin(this.angle) * s * dt);
+    if (this.stepAlong(game, this.angle, s * dt) < s * dt * 0.45) {
+      var detour = game.world.flowDir(this.x, this.y);
+      if (detour !== null) this.stepAlong(game, detour, s * dt);
+    }
   };
 
   /* If a body barely moved for a while, it is grinding on something. Push it
