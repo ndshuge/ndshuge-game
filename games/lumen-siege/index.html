@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>LUMEN SIEGE / 光核围城</title>
+<link rel="stylesheet" href="style.css">
+<script>
+  /* Verification hook: automated play tests read this to assert a clean load. */
+  window.__LUMEN_ERRORS = [];
+  window.addEventListener('error', function (e) {
+    window.__LUMEN_ERRORS.push(String((e && (e.message || e.error)) || 'resource error'));
+  }, true);
+</script>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game" width="480" height="270"></canvas>
+
+  <!-- ===== in-game HUD ===== -->
+  <div id="hud" class="layer hidden">
+    <div class="hud-top">
+      <div class="bar hp"><i id="hp-fill"></i><span id="hp-text" class="bar-text">100 / 100</span></div>
+      <div class="stats">
+        <span class="stat combo hidden" id="hud-combo"><b id="hud-combo-n">0</b><em>COMBO</em></span>
+        <span class="stat"><b id="hud-level">1</b><em>LV</em></span>
+        <span class="stat"><b id="hud-kills">0</b><em>KILL</em></span>
+        <span class="stat"><b id="hud-time">0:00</b><em>TIME</em></span>
+      </div>
+    </div>
+    <div class="bar xp"><i id="xp-fill"></i></div>
+    <div class="hud-bottom">
+      <span id="hud-dash" class="dash ready">DASH READY</span>
+      <button id="btn-mute" class="chip" type="button">SND ON</button>
+      <button id="btn-pause" class="chip" type="button">PAUSE</button>
+    </div>
+    <!-- dash recharge, centred along the bottom edge -->
+    <div id="dash-bar" class="dash-bar ready" aria-hidden="true">
+      <i id="dash-fill"></i>
+      <span class="dash-bar-label">DASH</span>
+    </div>
+    <!-- touch only: revealed once a real touch has been seen -->
+    <button id="btn-dash" class="touch-btn" type="button">冲刺</button>
+  </div>
+
+  <!-- touch only: a 16:9 arena has no sensible portrait form, so ask for landscape -->
+  <div id="rotate-hint">请把手机横过来<br><small>横屏才能看到完整战场</small></div>
+
+  <!-- ===== start screen ===== -->
+  <div id="screen-start" class="screen layer">
+    <div class="panel">
+      <h1 class="title">LUMEN<span>SIEGE</span></h1>
+      <p class="subtitle">光 核 围 城</p>
+      <p class="blurb">
+        蚀影正在合围。你是唯一还亮着的光。<br>
+        撑住，杀出去，或者熄灭。
+      </p>
+      <button id="btn-start" class="btn primary" type="button">START</button>
+      <p class="guide-link"><button id="btn-guide" class="linkish" type="button">重看剧情引导</button></p>
+      <ul class="keys">
+        <li><b>WASD</b><span>移动</span></li>
+        <li><b>鼠标</b><span>瞄准</span></li>
+        <li><b>左键</b><span>攻击</span></li>
+        <li><b>空格</b><span>冲刺</span></li>
+        <li><b>P / ESC</b><span>暂停</span></li>
+      </ul>
+      <dl class="records">
+        <div><dt>最长生存</dt><dd id="rec-time">0:00</dd></div>
+        <div><dt>最高等级</dt><dd id="rec-level">1</dd></div>
+        <div><dt>最多击杀</dt><dd id="rec-kills">0</dd></div>
+      </dl>
+      <button id="btn-mute-start" class="chip" type="button">SOUND: ON</button>
+    </div>
+  </div>
+
+  <!-- ===== upgrade screen ===== -->
+  <div id="screen-upgrade" class="screen layer hidden">
+    <div class="panel wide">
+      <h2 class="banner">LEVEL UP<small id="upgrade-phase">选择一项强化</small></h2>
+      <div id="upgrade-cards" class="cards"></div>
+      <p class="hint">点击卡片，或按对应<b>数字键</b>选择</p>
+    </div>
+  </div>
+
+  <!-- ===== story intro / tutorial ===== -->
+  <div id="screen-intro" class="screen layer hidden">
+    <div class="panel intro">
+      <p class="intro-step" id="intro-step">01 / 05</p>
+      <h2 class="intro-title" id="intro-title"></h2>
+      <p class="intro-body" id="intro-body"></p>
+      <p class="intro-hint hidden" id="intro-hint"></p>
+      <div class="intro-foot">
+        <button id="btn-intro-next" class="btn primary" type="button">继续</button>
+        <button id="btn-intro-skip" class="chip" type="button">跳过</button>
+        <div class="intro-dots" id="intro-dots"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== pause screen ===== -->
+  <div id="screen-pause" class="screen layer hidden">
+    <div class="panel">
+      <h2 class="banner small">PAUSED</h2>
+      <button id="btn-resume" class="btn primary" type="button">RESUME</button>
+      <button id="btn-quit" class="btn" type="button">QUIT RUN</button>
+    </div>
+  </div>
+
+  <!-- ===== death screen ===== -->
+  <div id="screen-dead" class="screen layer hidden">
+    <div class="panel">
+      <h2 class="banner dead">LIGHT OUT<small>光核熄灭了</small></h2>
+      <dl class="result">
+        <div><dt>生存时间</dt><dd id="res-time">0:00</dd></div>
+        <div><dt>击杀数</dt><dd id="res-kills">0</dd></div>
+        <div><dt>等级</dt><dd id="res-level">1</dd></div>
+      </dl>
+      <p id="res-new" class="newrec hidden">NEW RECORD</p>
+      <button id="btn-retry" class="btn primary" type="button">RESTART</button>
+      <button id="btn-menu" class="btn" type="button">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- pure decoration: CRT scanlines + phosphor grille + screen falloff.
+       Deliberately has no id: ui.js resolves elements by id and must never
+       touch this layer. Sits above every screen; pointer-events pass through. -->
+  <div class="fx-crt" aria-hidden="true"></div>
+</div>
+
+<script src="src/core.js"></script>
+<script src="src/input.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/sprites.js"></script>
+<script src="src/map.js"></script>
+<script src="src/combat.js"></script>
+<script src="src/player.js"></script>
+<script src="src/enemies.js"></script>
+<script src="src/upgrades.js"></script>
+<script src="src/upgrade-icons.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/intro.js"></script>
+<script src="src/game.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
