@@ -101,8 +101,8 @@ addEventListener('resize',fit);fit();
    相位 = 圈内序号 × (TAU / 圈内数量)，同轨相邻行星的角距恒为 360°/n
    （内圈/中圈各 5 颗 → 72°，外圈 4 颗 → 90°），这是“最小角距”的硬保证；
    每圈再叠一个固定偏移，避免三圈在同一条视线上排成一串。 */
-var ORBR=[70,110,148],ORBP=[.11,.075,.05],SQUASH=.46,SPOTY=SY-2;
-var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[11,12.5,14][i%3],pulse:0,ov:1};});
+var ORBR=[66,108,150],ORBP=[.11,.075,.05],SQUASH=.46,SPOTY=SY-2;
+var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[12,11.5,13][i%3],pulse:0,ov:1,ly:undefined};});
 (function(){
   for(var o=0;o<3;o++){
     var m=planets.filter(function(p){return p.orbit===o;});
@@ -221,12 +221,15 @@ var PX=16,PY=8,PW=W-32,PH=120;     /* 投影面板矩形 */
 var ROCKET_X=CX-58,BASE_X=CX+64;
 function ease(k){return k*k*(3-2*k);}
 function hitRect(r,x,y){return !!r&&x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;}
-var INTRO={chase:1.0,descent:.7,touch:.3,meet:1.7,panel:.5};
+var INTRO={chase:1.0,descent:.7,touch:.3,meet:1.7,panel:.5,
+  leave:.5,walkback:.9,board:.5,ascend:.9,recall:1.0};
+var RETURNING={leave:1,walkback:1,board:1,ascend:1,recall:1};
 var intro={active:false,i:-1,phase:'chase',t:0,
-  W:{x:0,y:0},camAX:0,camAY:0,camZ:1,Z:50,arcR:600,
-  sx:0,sy:0,rx:0,ry:0,scale:1,
+  W:{x:0,y:0},camAX:0,camAY:0,camZ:1,Z:50,arcR:600,orbitA:0,
+  sx:0,sy:0,rx:0,ry:0,scale:1,flameK:1,
   doorOpen:0,mx:0,my:0,bx:0,by:0,marm:0,barm:0,walkPh:0,clasp:false,
-  panel:0,starK:1,enterR:null,likeR:null,panelR:null};
+  mdir:1,bdir:-1,malpha:1,balpha:1,
+  panel:0,starK:1,enterR:null,likeR:null,panelR:null,backR:null};
 function groundY(x){var d=x-CX,R=intro.arcR,t=R*R-d*d;return LY+(t>0?R-Math.sqrt(t):0);}
 /* 转场相机：世界点 intro.W 落到屏幕 (camAX,camAY)、按 camZ 缩放；非转场时为单位阵+抖动 */
 function camApply(shX,shY){
@@ -249,8 +252,10 @@ function launchWarp(i){
   intro.sx=rocket.x;intro.sy=rocket.y+9;   /* 巡航火箭底缘 */
   intro.scale=1;intro.doorOpen=0;intro.marm=0;intro.barm=0;
   intro.panel=0;intro.clasp=false;intro.walkPh=0;intro.starK=1;
+  intro.flameK=1;intro.orbitA=rocket.a;      /* 冻结轨道点：回来时从这里接上，不跳 */
+  intro.mdir=1;intro.bdir=-1;intro.malpha=1;intro.balpha=1;
   intro.mx=CX-52;intro.my=LY;intro.bx=BASE_X;intro.by=LY;
-  intro.enterR=null;intro.likeR=null;intro.panelR=null;
+  intro.enterR=null;intro.likeR=null;intro.panelR=null;intro.backR=null;
   document.body.classList.add('warping');
   tone('sawtooth',120,760,.8,.12);tone('square',60,320,.8,.06);
 }
@@ -258,6 +263,41 @@ function go(){                        /* 渐黑后跳转 */
   if(flash.active)return;
   flash.active=true;flash.t=flash.dur;
   tone('square',660,990,.12,.08);
+}
+/* 返回：告别 → 各自回舱 → 起飞 → 相机拉回星系，全程约 3.8s，点击可快进 */
+function launchReturn(){
+  if(!intro.active||RETURNING[intro.phase])return;
+  if(intro.phase!=='panel'&&intro.phase!=='meet')return;
+  audio();
+  intro.phase='leave';intro.t=0;intro.clasp=false;
+  intro.mdir=-1;intro.bdir=1;          /* 两人转身 */
+  intro.malpha=1;intro.balpha=1;
+  /* 从当前状态收，不假设一定是从完整面板/到位后返回（Esc 可在 meet 中途触发） */
+  intro.panelFrom=intro.panel;intro.armFrom=intro.marm;
+  intro.mxFrom=intro.mx;intro.bxFrom=intro.bx;intro.doorFrom=intro.doorOpen;
+  intro.enterR=intro.likeR=intro.backR=intro.panelR=null;
+  document.body.classList.remove('warping');
+  tone('square',520,300,.14,.09);tone('square',300,180,.18,.05,.06);
+}
+function liftoff(){
+  shakeT=REDUCED?0:.22;whoosh();tone('sawtooth',110,520,.55,.12);tone('square',60,240,.5,.07);
+  for(var i=0;i<30;i++){
+    parts.push({x:intro.rx+rnd(-8,8),y:LY-1,vx:rnd(-70,70),vy:rnd(-46,-6),
+      age:0,life:rnd(.4,.95),s:Math.random()<.45?2:1,
+      c:Math.random()<.5?'#ffd54f':(Math.random()<.5?'#93a4bd':'#cfd8dc')});}
+}
+function endReturn(fast){
+  if(!intro.active)return;
+  intro.active=false;intro.i=-1;intro.phase='chase';intro.t=0;intro.panel=0;
+  /* 火箭接回被冻结的那一刻的轨道点：位置连续，不会跳 */
+  rocket.a=intro.orbitA;
+  rocket.x=CX+Math.cos(rocket.a)*172;
+  rocket.y=SPOTY+Math.sin(rocket.a)*172*SQUASH;
+  document.body.classList.remove('warping');
+  if(fast)whitePop=REDUCED?0:.10;
+  infoFade=1;
+  intro.enterR=intro.likeR=intro.backR=intro.panelR=null;
+  tone('square',700,520,.10,.06);
 }
 function touchdown(){
   shakeT=REDUCED?0:.22;whoosh();tone('sine',130,45,.42,.26);
@@ -303,6 +343,35 @@ function introUpdate(dt){
     if(k>=1){intro.phase='panel';intro.t=0;}
   }else if(ph==='panel'){
     intro.panel=clamp(intro.t/INTRO.panel,0,1);
+  }else if(ph==='leave'){
+    /* 收投影 + 松手：面板/投影仪按进入时的状态淡出 */
+    intro.panel=intro.panelFrom*(1-k);
+    intro.marm=intro.armFrom*(1-k);intro.barm=intro.armFrom*(1-k);
+    if(k>=1){intro.panel=0;intro.marm=0;intro.barm=0;intro.phase='walkback';intro.t=0;}
+  }else if(ph==='walkback'){
+    var wk=ease(k);
+    intro.walkPh+=dt*2.8;                 /* 行走循环连续，不跳帧 */
+    intro.mx=lerp(intro.mxFrom,CX-52,wk);intro.bx=lerp(intro.bxFrom,BASE_X,wk);
+    intro.my=groundY(intro.mx);intro.by=groundY(intro.bx);
+    if(k>=1){intro.phase='board';intro.t=0;}
+  }else if(ph==='board'){
+    /* 进舱 / 进门：门从当前开度关上，角色随之消失 */
+    intro.doorOpen=intro.doorFrom*(1-k);
+    intro.malpha=Math.max(0,1-k*1.4);intro.balpha=Math.max(0,1-k*1.4);
+    if(k>=1){intro.malpha=0;intro.balpha=0;intro.phase='ascend';intro.t=0;liftoff();}
+  }else if(ph==='ascend'){
+    intro.flameK=ease(k);
+    intro.ry=lerp(LY,LY-46,ease(k));
+    if(k>=1){intro.phase='recall';intro.t=0;}
+  }else if(ph==='recall'){
+    var rk=ease(k);
+    intro.camZ=lerp(intro.Z,1,rk);
+    intro.camAX=lerp(CX,intro.W.x,rk);intro.camAY=lerp(LY,intro.W.y,rk);
+    /* 火箭飞回被冻结的轨道点 */
+    var ox=CX+Math.cos(intro.orbitA)*172,oy=SPOTY+Math.sin(intro.orbitA)*172*SQUASH;
+    intro.rx=lerp(ROCKET_X,ox,rk);intro.ry=lerp(LY-46,oy+9,rk);
+    intro.flameK=Math.max(0,1-rk);
+    if(k>=1){intro.flameK=0;endReturn(false);}
   }
   intro.starK=lerp(intro.starK,intro.phase==='chase'?1.7:1,Math.min(1,dt*2.2));
 }
@@ -475,18 +544,29 @@ function drawIntroScene(t){
     ctx.globalAlpha=1;
   }
   if(ph!=='chase')drawBase(BASE_X,LY,intro.doorOpen,t);
-  /* 尾焰：巡航 1 → 降落逐减 → 落地关掉 */
-  var fl=ph==='chase'?1:(ph==='descent'?Math.max(0,1-intro.t/INTRO.descent):0);
-  drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,fl,t);
-  if(ph==='meet'||ph==='panel'){
-    drawRabbit(intro.bx,intro.by,intro.walkPh,-1,intro.barm,t);
-    drawMouse(intro.mx,intro.my,intro.walkPh,1,intro.marm,t);
-    if(intro.clasp){
-      var jy=(Math.sin(t*22)>0)?0:-1;      /* 握手抖动 */
-      ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-12+jy,6,3);
-      ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-12+jy,2,1);
+  /* 尾焰由状态机维护：降落收、起飞拉满 */
+  drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,intro.flameK,t);
+  if(!RETURNING[ph]){
+    if(ph==='meet'||ph==='panel'){
+      drawRabbit(intro.bx,intro.by,intro.walkPh,intro.bdir,intro.barm,t);
+      drawMouse(intro.mx,intro.my,intro.walkPh,intro.mdir,intro.marm,t);
+      if(intro.clasp){
+        var jy=(Math.sin(t*22)>0)?0:-1;      /* 握手抖动 */
+        ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-12+jy,6,3);
+        ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-12+jy,2,1);
+      }
+      if(ph==='panel')drawProjector(CX+34,LY,t);
     }
-    if(ph==='panel')drawProjector(CX+34,LY,t);
+  }else{
+    /* 返回流程：角色按各自 alpha 淡出，投影仪跟着面板淡出 */
+    if(ph!=='recall'){
+      if(intro.balpha>.01){ctx.globalAlpha=intro.balpha;
+        drawRabbit(intro.bx,intro.by,intro.walkPh,intro.bdir,intro.barm,t);}
+      if(intro.malpha>.01){ctx.globalAlpha=intro.malpha;
+        drawMouse(intro.mx,intro.my,intro.walkPh,intro.mdir,intro.marm,t);}
+      ctx.globalAlpha=1;
+      if(intro.panel>.02)drawProjector(CX+34,LY,t);
+    }
   }
 }
 function drawIntroPanel(t){
@@ -521,14 +601,11 @@ function drawIntroPanel(t){
   ctx.shadowColor='#00e5ff';ctx.shadowBlur=8;
   ctx.fillText(G.t,28,PY+54);
   ctx.shadowBlur=0;
-  /* 跳过提示（左下，避开右栏按钮带） */
-  ctx.font=FB;ctx.fillStyle='rgba(150,215,255,.45)';
-  ctx.fillText('点击面板外任意处跳过',28,PY+72);
-  /* 描述：整幅宽度两行 */
-  ctx.fillStyle='rgba(159,212,239,.92)';
-  var dl=wrapText(G.d,PW-28,2);
-  for(var i=0;i<dl.length;i++)ctx.fillText(dl[i],28,PY+92+i*17);
-  /* 进入游戏（右栏大按钮） */
+  /* 描述：左栏三行，右栏让位给按钮列 */
+  ctx.font=FB;ctx.fillStyle='rgba(159,212,239,.92)';
+  var dl=wrapText(G.d,260,3);
+  for(var i=0;i<dl.length;i++)ctx.fillText(dl[i],28,PY+78+i*17);
+  /* 进入游戏（右栏主按钮，实心） */
   var eb={x:PX+PW-160,y:PY+36,w:148,h:38};
   ctx.fillStyle=hitRect(eb,mouseX,mouseY)?'#8cf6ff':'#00e5ff';
   ctx.fillRect(eb.x,eb.y,eb.w,eb.h);
@@ -536,6 +613,19 @@ function drawIntroPanel(t){
   ctx.fillStyle='#03121e';ctx.textAlign='center';ctx.font=FB16;
   ctx.fillText('\u8fdb\u5165\u6e38\u620f',eb.x+eb.w/2,eb.y+25);
   ctx.textAlign='left';
+  /* 返回游戏厅（右栏次按钮，描边） */
+  var rb={x:PX+PW-160,y:PY+78,w:148,h:30};
+  var hot=hitRect(rb,mouseX,mouseY);
+  ctx.fillStyle=hot?'rgba(140,246,255,.22)':'rgba(0,229,255,.10)';
+  ctx.fillRect(rb.x,rb.y,rb.w,rb.h);
+  ctx.strokeStyle=hot?'#8cf6ff':'rgba(0,229,255,.5)';ctx.lineWidth=1;
+  ctx.strokeRect(rb.x+.5,rb.y+.5,rb.w-1,rb.h-1);
+  /* 像素左箭头（不用字体字形，避免缺字） */
+  ctx.fillStyle=hot?'#eafcff':'#9fd4ef';
+  var ax=rb.x+16,ay=rb.y+15;
+  ctx.fillRect(ax,ay,2,1);ctx.fillRect(ax+2,ay-1,2,3);
+  ctx.fillRect(ax+4,ay-2,2,5);ctx.fillRect(ax+6,ay,7,1);
+  ctx.fillText('\u8fd4\u56de\u6e38\u620f\u5385',rb.x+90,rb.y+20);
   /* 点赞计数（右栏顶部） */
   var lb={x:PX+PW-128,y:PY+8,w:112,h:24};
   var liked=likeOn[G.key]||isLiked(G.key);
@@ -548,7 +638,13 @@ function drawIntroPanel(t){
   ctx.font=FB;ctx.fillStyle=liked?'#ffd0da':'#ffc2ce';
   ctx.fillText(countText(likeCache[G.key]),lb.x+26,lb.y+17);
   ctx.globalAlpha=1;
-  intro.enterR=eb;intro.likeR=lb;intro.panelR={x:PX,y:PY,w:PW,h:PH};
+  /* 出口提示：面板下方、角色上方，说清两条路 */
+  ctx.globalAlpha=a*.5;
+  ctx.font=FB;ctx.fillStyle='rgba(150,215,255,.9)';ctx.textAlign='center';
+  ctx.fillText('\u70b9\u9762\u677f\u5916\u8fdb\u5165\u6e38\u620f \u00b7 \u9762\u677f\u5185\u53ef\u8fd4\u56de',CX,136);
+  ctx.textAlign='left';
+  ctx.globalAlpha=1;
+  intro.enterR=eb;intro.likeR=lb;intro.backR=rb;intro.panelR={x:PX,y:PY,w:PW,h:PH};
 }
 /* 选中游戏的信息条：画在星系下方（底部不再有 DOM 面板） */
 function drawInfoBlock(){
@@ -597,12 +693,14 @@ cv.addEventListener('pointerdown',function(e){
   var m=toGame(e),mx=m[0],my=m[1];mouseX=mx;mouseY=my;sx0=mx;sy0=my;
   if(flash.active)return;
   if(intro.active){
-    /* 面板阶段：进入游戏 / 点赞 / 面板内空白；面板外任意处 = 跳过 */
+    /* 面板阶段：进入 / 点赞 / 返回 / 面板内空白；面板外任意处 = 跳过进入 */
     if(intro.phase==='panel'&&intro.panel>=1){
       if(hitRect(intro.enterR,mx,my)){go();return;}
       if(hitRect(intro.likeR,mx,my)){addLike(GAMES[intro.i].key);return;}
+      if(hitRect(intro.backR,mx,my)){launchReturn();return;}
       if(hitRect(intro.panelR,mx,my))return;
     }
+    if(RETURNING[intro.phase]){endReturn(true);return;}   /* 返回途中点击 = 快进回家 */
     go();return;
   }
   if(Math.abs(mx-rocket._x)<16&&my>rocket._y-24&&my<rocket._y+12){
@@ -627,7 +725,11 @@ cv.addEventListener('pointerup',function(e){
 addEventListener('keydown',function(e){
   audio();
   if(intro.active){
-    if(e.key==='Enter'||e.key===' ')go();   /* 面板阶段=进入，其他阶段=跳过 */
+    if(e.key==='Enter'||e.key===' ')go();                 /* 面板=进入，其他=跳过 */
+    else if(e.key==='Escape'||e.key==='Backspace'){
+      if(RETURNING[intro.phase])endReturn(true);
+      else launchReturn();
+    }
     return;}
   if(e.key==='ArrowLeft')cycle(-1);
   else if(e.key==='ArrowRight')cycle(1);
@@ -667,6 +769,7 @@ function update(dt,t){
           if(ddx*ddx+ddy*ddy<rr*rr){ov=true;break;}}
       }
       po.ov=ov?.72:1;}
+    relaxLabels(dt);
     /* 火箭：外圈轨道巡航，永远在飞 */
     rocket.a+=.2*gdt*(REDUCED?.3:1);
     rocket.x=CX+Math.cos(rocket.a)*172;
@@ -737,6 +840,56 @@ function drawStarCore(t){
   ctx.fillStyle='#ffd54f';ctx.fillText('鼠哥游戏厅',CX,SY+26);
   ctx.textAlign='left';
 }
+/* ---------- 名字避让：标签沿 y 互相推开 + 避开别的行星盘，缓动跟随 ----------
+   行星本体叠有 ghostOverlap 兑底，真正会互相压住的是常显名字：
+   每帧把重叠的标签对沿 y 推开，推完限幅（不撞信息条 / 不远离子行星），再缓动落地。 */
+var LBH=13;
+function labelW(s,fs){var w=0;for(var i=0;i<s.length;i++)w+=(s.charCodeAt(i)>255?fs:fs*.55);return w;}
+function relaxLabels(dt){
+  var vis=[],i,j,it;
+  for(i=0;i<planets.length;i++){var p=planets[i];
+    if(!visible(p))continue;
+    var base=p.y+p.r+11;
+    if(p.lx===undefined){p.lx=p.x;p.ly=base;}
+    vis.push({p:p,w:labelW(p.g.t,12),x:p.lx,y:p.ly,bx:p.x,by:base,tx:p.lx,ty:p.ly});}
+  var n=vis.length;
+  if(n>1){
+    /* 双轴松弛，目标空间内迭代：哪根轴重叠量小就沿哪根推，推完立即生效 */
+    for(it=0;it<4;it++){
+      for(i=0;i<n;i++)for(j=i+1;j<n;j++){
+        var A=vis[i],B=vis[j];
+        var ox=(A.w+B.w)/2+4-Math.abs(A.x-B.x);   /* x 重叠量 */
+        var oy=LBH-Math.abs(A.y-B.y);             /* y 重叠量 */
+        if(ox<=0||oy<=0)continue;
+        var sx=0,sy=0;
+        if(ox<=oy){sx=(ox+1)/2;}else{sy=(oy+1)/2;}
+        if(A.x<=B.x){A.tx-=sx;B.tx+=sx;A.x-=sx;B.x+=sx;}
+        else{A.tx+=sx;B.tx-=sx;A.x+=sx;B.x-=sx;}
+        if(sy){
+          if(A.y<=B.y){A.ty-=sy;B.ty+=sy;A.y-=sy;B.y+=sy;}
+          else{A.ty+=sy;B.ty-=sy;A.y+=sy;B.y-=sy;}}
+      }
+      /* 名字别压在别的行星盘上：沿远离圆心的方向径向推（加强反而连锁撞别的约束，9 是实测最优） */
+      for(i=0;i<n;i++){var L=vis[i];
+        for(j=0;j<planets.length;j++){var q=planets[j];
+          if(q===L.p||!visible(q))continue;
+          var dx=L.x-q.x,dy=L.y-q.y,rr=q.r+9;
+          if(dx*dx+dy*dy>=rr*rr)continue;
+          var d=Math.sqrt(dx*dx+dy*dy)||1,need=rr-d;
+          L.tx+=dx/d*need;L.x+=dx/d*need;
+          L.ty+=dy/d*need;L.y+=dy/d*need;
+        }
+      }
+    }
+  }
+  for(i=0;i<n;i++){var L2=vis[i];
+    var tx=clamp(L2.tx,L2.bx-40,L2.bx+40);   /* 不离自己的行星太远 */
+    var ty=clamp(L2.ty,28,198);              /* 不出画布、不压底部信息条 */
+    ty=clamp(ty,L2.by-30,L2.by+22);
+    L2.p.lx=lerp(L2.p.lx,tx,Math.min(1,dt*7));
+    L2.p.ly=lerp(L2.p.ly,ty,Math.min(1,dt*7));
+  }
+}
 function drawPlanet(p,t){
   var G=p.g;
   var sel=p.i===cur;
@@ -780,13 +933,22 @@ function drawPlanet(p,t){
     ctx.strokeStyle=hexA(G.g,.5*fade*ov);
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,Math.PI,TAU);ctx.stroke();
     ctx.beginPath();ctx.ellipse(x,y,rx,ry,tl,0,Math.PI);ctx.stroke();}
-  /* 常显名字（转场放大时不画） */
+  /* 常显名字（转场放大时不画；位置经双轴避让，挪远时补一条引线） */
   if(r>6&&!intro.active){
+    var lx=(p.lx!==undefined)?p.lx:x;
+    var lyy=(p.ly!==undefined)?p.ly:(y+p.r+11);
+    var ddx=lx-x,ddy=lyy-y;
+    if(ddx*ddx+ddy*ddy>144){
+      var dl=Math.sqrt(ddx*ddx+ddy*ddy),ux=ddx/dl,uy=ddy/dl;
+      ctx.globalAlpha=.30*fade*ov;
+      ctx.strokeStyle='#9fd4ef';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x+ux*(r+2),y+uy*(r+2));ctx.lineTo(lx,lyy-3);ctx.stroke();
+    }
     ctx.globalAlpha=.9*fade*ov;
     ctx.font=FB;
     ctx.textAlign='center';
-    ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,x+1,y+r+12);
-    ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,x,y+r+11);
+    ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,lx+1,lyy+1);
+    ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,lx,lyy);
     ctx.textAlign='left';}
   ctx.globalAlpha=1;
 }
@@ -925,8 +1087,8 @@ function render(t){
 }
 renderInfo();
 applyDev();
-$('hint').textContent=IS_TOUCH?'点行星降落 → 兔子介绍 · 左右滑动浏览 · NDSHUGE © 2026'
-  :'点行星降落 → 兔子介绍 · ← → 浏览 · R/D 开发者模式 · NDSHUGE © 2026';
+$('hint').textContent=IS_TOUCH?'点行星降落 → 兔子介绍 · 面板内可返回 · 左右滑动浏览 · NDSHUGE © 2026'
+  :'点行星降落 → 兔子介绍 · 面板内可返回 · ← → 浏览 · R/D 开发者模式 · NDSHUGE © 2026';
 
 var last=performance.now();
 function frame(now){
