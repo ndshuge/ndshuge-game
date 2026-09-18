@@ -168,24 +168,33 @@
   /* A level now hands over two cards (one per pool), so the demand is raised to
      match. Otherwise the growth rate simply doubles and the run flattens out. */
   /* A level is one card again, so the demand returns to the single-pool curve. */
-  /*: Level-up spacing the curve aims to keep above, in seconds. */
-  Player.MIN_LEVEL_GAP = 10;
+  /*: Level-up spacing the curve aims for, in seconds. It is a target, not a floor:
+     a player who is earning faster gets a proportionally larger cost (so the pace
+     holds), and a player who is earning slowly gets a *cheaper* level than the plain
+     curve would give. Without the second half, a slow late game turns into a wall. */
+  Player.TARGET_GAP = 10;
 
   /* Cost of reaching a given level.
 
-     The floor is the plain curve. On top of it, the cost must be at least as much as
-     the player earns in MIN_LEVEL_GAP seconds, which is what turns "at least N seconds
-     between levels" into arithmetic rather than a rule. Early on the earn rate is low
-     so the floor wins and the curve feels untouched; once a built player is clearing
-     waves, the rate term takes over and the spacing opens up on its own.
+     The rate term is measured from xp actually COLLECTED, not dropped: a player who
+     leaves gems on the floor is not "earning" that experience, and pricing the next
+     level as if they were is what made the late game feel impossible. Measured from
+     pickups, a player who is not keeping up gets levels cheaper, which is the right
+     correction.
 
-     Deliberately continuous: no threshold, no visible step, nothing to notice. The
-     value is only recomputed when a level is actually taken, so the xp bar never
-     jitters and the player never sees the number move underneath them. */
+     The floor is a fraction of the base curve, not the base curve itself: it exists
+     only so that a stale or zero sample cannot crash the cost to nothing. */
   Player.prototype.demandFor = function (level) {
     var base = 7 + level * 4.2 + Math.pow(level, 1.12);
-    var fromRate = this.xpRate * Player.MIN_LEVEL_GAP;
-    return Math.floor(Math.max(base, fromRate));
+    /* Before the sampler has a reading there is nothing to pace against. */
+    if (this.xpRate <= 0) return Math.floor(base);
+    /* Price the level at what the player actually earns in TARGET_GAP seconds.
+       No upper bound on purpose: an earlier version capped this relative to the
+       base curve, which at low levels squeezed a 10-second level down to 5 and
+       reintroduced the exact problem it was meant to solve. */
+    var fromRate = this.xpRate * Player.TARGET_GAP;
+    /* A small floor so a near-zero reading cannot make levels free. */
+    return Math.floor(Math.max(fromRate, base * 0.15));
   };
 
   Player.prototype.gainXp = function (value, game) {

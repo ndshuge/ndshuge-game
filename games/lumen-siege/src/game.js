@@ -221,8 +221,10 @@
     var def = PG.ENEMY_DEFS[type];
     var r = def ? def.r : 5;
     if (elite) r *= 1.35;
-    /* a little margin so a body is not placed touching a wall it then sticks on */
-    return Math.ceil(r) + 4;
+    /* Margin covers the drawn sprite, not just the collision circle: at +4 a body
+       could be legally placed with its artwork overlapping the rock it then had to
+       squeeze past, which reads as "spawned inside a wall". */
+    return Math.ceil(r) + 8;
   };
 
   Game.prototype.addEnemy = function (type, x, y, forceElite) {
@@ -267,7 +269,7 @@
     if (duration > this.shakeTime) this.shakeTime = duration;
   };
 
-  Game.prototype.damageEnemy = function (e, amount, angle, knock, crit, execute) {
+  Game.prototype.damageEnemy = function (e, amount, angle, knock, crit, execute, source) {
     if (e.dead) return;
 
     /* shielder: the facing side is armoured, so you have to come around it */
@@ -304,7 +306,12 @@
 
     if (this.player) {
       this.player.registerHit();
-      if (this.player.timeStopChance > 0 && PG.rng.next() < this.player.timeStopChance) {
+      /* Time stop only rolls for a direct hit from the player's own weapon. It used
+         to roll on every damage event, which meant a split volley of eight shards
+         rolled eight times and a full-screen bullet storm froze the field constantly.
+         Secondary sources (shards, orbit, dash, explosions, thorns, chain) never roll. */
+      if (source === 'shot' && this.player.timeStopChance > 0
+          && PG.rng.next() < this.player.timeStopChance) {
         this.freezeAll(0.34);
       }
     }

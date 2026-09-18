@@ -210,7 +210,8 @@
           dmg *= 1 + en.mark * p.mark;
         }
 
-        game.damageEnemy(en, dmg, p.angle, p.knock, p.crit, p.execute);
+        game.damageEnemy(en, dmg, p.angle, p.knock, p.crit, p.execute,
+          p.isSplit ? 'split' : 'shot');
 
         if (!en.dead) {
           if (p.burn > 0) en.burn = Math.max(en.burn || 0, p.burn);

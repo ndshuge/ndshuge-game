@@ -772,29 +772,46 @@ check('every dependent card names the upgrade it strengthens', () => {
   return `${lines.length} dependent cards labelled (e.g. "${lines[0]}")`;
 });
 
-check('the level-cost curve guarantees a minimum spacing at any earn rate', () => {
-  /* This is the whole requirement stated as arithmetic: cost must be at least what
-     the player earns in MIN_LEVEL_GAP seconds. */
-  const gap = PG.Player.MIN_LEVEL_GAP;
+check('the level cadence targets about ten seconds, fast or slow', () => {
   const p = new PG.Player(0, 0);
+  const gap = PG.Player.TARGET_GAP;
   const rows = [];
-  for (const rate of [5, 30, 120, 400]) {
+  /* Across a wide spread of earn rates, the cost should buy roughly the target
+     spacing. This is the two-sided requirement: the old version only ever made the
+     cost larger, so a slow late game turned into a wall. */
+  for (const rate of [6, 20, 60, 150, 400]) {
     p.xpRate = rate;
     for (const lv of [1, 5, 12, 25, 40]) {
       const seconds = p.demandFor(lv) / rate;
-      assert(seconds >= gap - 0.01,
-        `rate ${rate}/s at level ${lv}: cost only buys ${seconds.toFixed(1)}s`);
+      assert(seconds >= gap * 0.5 && seconds <= gap * 1.6,
+        `rate ${rate}/s at level ${lv}: ${seconds.toFixed(1)}s is not near the ${gap}s target`);
     }
-    rows.push(`${rate}/s ok`);
+    rows.push(`${rate}/s -> ~${(p.demandFor(12) / rate).toFixed(1)}s`);
   }
-  /* and early on it must still look like a normal curve, not a wall */
-  p.xpRate = 0;
-  assert(p.demandFor(1) < 20, 'the opening level costs too much');
-  assert(p.demandFor(5) < 60, 'the early curve is too steep');
-  return `gap ${gap}s holds at ${rows.join(', ')}`;
+  return rows.join(', ');
 });
 
-check('a fast-clearing run settles into wide level spacing, not a chain', () => {
+check('a build that outpaces the base curve does not get punished', () => {
+  /* The concrete bug: a strong late-game player used to face the plain curve while
+     their kill rate had grown, so levels crawled. Pricing against the earned rate
+     and allowing the cost to fall below the base curve fixes that half. */
+  const slow = new PG.Player(0, 0);
+  slow.level = 20;
+  slow.xpRate = 3;                     /* barely collecting anything */
+  const cheap = slow.demandFor(20);
+  const baseCurve = 7 + 20 * 4.2 + Math.pow(20, 1.12);
+  assert(cheap <= baseCurve, `a slow player was charged ${cheap} vs base ${baseCurve.toFixed(0)}`);
+
+  const fast = new PG.Player(0, 0);
+  fast.level = 20;
+  fast.xpRate = 120;
+  const cost = fast.demandFor(20);
+  const seconds = cost / fast.xpRate;
+  assert(seconds >= 8 && seconds <= 12, `a fast player waited ${seconds.toFixed(1)}s`);
+  return `slow pays ${cheap}, fast pays ${cost} (~${seconds.toFixed(1)}s)`;
+});
+
+check('a fast-clearing run settles into the target spacing', () => {
   const p = new PG.Player(0, 0);
   const game = { time: 0, queueLevelUp() {} };
   let lastAt = 0;
@@ -808,13 +825,10 @@ check('a fast-clearing run settles into wide level spacing, not a chain', () => 
     if (p.level > prev) { gaps.push(t - lastAt); lastAt = t; prev = p.level; }
   }
   assert(gaps.length > 10, `only ${gaps.length} level-ups simulated`);
-  /* The first few levels are legitimately fast: the sampler needs half a second
-     before it has a rate to work from. Settling starts around the eighth level. */
-  const floor = PG.Player.MIN_LEVEL_GAP - 0.5;
   const settled = gaps.slice(8);
-  const worst = Math.min(...settled);
-  assert(worst >= floor, `a settled gap was only ${worst.toFixed(1)}s`);
-  return `${gaps.length} levels over 400s, worst settled gap ${worst.toFixed(1)}s`;
+  const avg = settled.reduce((a, b) => a + b, 0) / settled.length;
+  assert(avg >= 6 && avg <= 14, `settled spacing averaged ${avg.toFixed(1)}s`);
+  return `${gaps.length} levels over 400s, settled average ${avg.toFixed(1)}s`;
 });
 
 check('the earn-rate sample is forgotten after a quiet spell', () => {
@@ -951,6 +965,33 @@ check('keyboard still works and touch does not leak into it', () => {
     fn({ preventDefault() {}, changedTouches: [{ clientX: 60, clientY: 200, identifier: 9 }] }));
   assert(Input.mouse.down === false, 'a movement touch started firing');
   return 'keyboard unaffected, movement touch does not shoot';
+});
+
+check('time stop only rolls for direct hits, never for shards', () => {
+  game.newRun();
+  const p = game.player;
+  p.timeStopChance = 1;                    /* would fire on every allowed roll */
+  let freezes = 0;
+  const real = game.freezeAll.bind(game);
+  game.freezeAll = function () { freezes++; };
+
+  const e = game.addEnemy('crawler', p.x + 40, p.y, false);
+  e.spawnT = 0;
+
+  game.damageEnemy(e, 1, 0, 0, false, 0, 'shot');
+  assert(freezes === 1, `a direct hit did not roll for time stop (${freezes})`);
+
+  /* a split volley is eight hits: it used to roll eight times and freeze the field
+     constantly during any bullet-heavy build */
+  for (let i = 0; i < 12; i++) game.damageEnemy(e, 1, 0, 0, false, 0, 'split');
+  assert(freezes === 1, `shards rolled ${freezes - 1} extra times`);
+
+  /* and with no source named, nothing rolls either */
+  for (let i = 0; i < 6; i++) game.damageEnemy(e, 1, 0, 0, false, 0);
+  assert(freezes === 1, 'an unnamed damage source rolled for time stop');
+
+  game.freezeAll = real;
+  return 'direct hits roll once, shards and unnamed sources never do';
 });
 
 check('death ends the run and writes records to storage', () => {
