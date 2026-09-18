@@ -620,12 +620,19 @@ function drawIntroPanel(t){
   ctx.fillRect(rb.x,rb.y,rb.w,rb.h);
   ctx.strokeStyle=hot?'#8cf6ff':'rgba(0,229,255,.5)';ctx.lineWidth=1;
   ctx.strokeRect(rb.x+.5,rb.y+.5,rb.w-1,rb.h-1);
-  /* 像素左箭头（不用字体字形，避免缺字） */
+  /* 箭头和文字作为一组量宽度后居中。之前是左对齐 + 固定偏移，而且字体还沿用
+     了上一段的 16px，结果是文字从框里溢出去 22px。 */
+  var backLabel='\u8fd4\u56de\u6e38\u620f\u5385';
+  ctx.font=FB;
+  var arrowW=9,labelGap=8;
+  var backW=arrowW+labelGap+ctx.measureText(backLabel).width;
+  var bx0=rb.x+Math.round((rb.w-backW)/2);
   ctx.fillStyle=hot?'#eafcff':'#9fd4ef';
-  var ax=rb.x+16,ay=rb.y+15;
+  var ax=bx0,ay=rb.y+15;
   ctx.fillRect(ax,ay,2,1);ctx.fillRect(ax+2,ay-1,2,3);
   ctx.fillRect(ax+4,ay-2,2,5);ctx.fillRect(ax+6,ay,7,1);
-  ctx.fillText('\u8fd4\u56de\u6e38\u620f\u5385',rb.x+90,rb.y+20);
+  ctx.textAlign='left';
+  ctx.fillText(backLabel,bx0+arrowW+labelGap,rb.y+20);
   /* 点赞计数（右栏顶部） */
   var lb={x:PX+PW-128,y:PY+8,w:112,h:24};
   var liked=likeOn[G.key]||isLiked(G.key);
