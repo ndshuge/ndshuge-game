@@ -11,7 +11,8 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg)}
 body{font-family:"Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace;
-     color:#bfefff;user-select:none;-webkit-user-select:none}
+     color:#bfefff;user-select:none;-webkit-user-select:none;
+     background:linear-gradient(#070a1e,#03040e)}
 #space{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
        image-rendering:crisp-edges;image-rendering:pixelated;touch-action:none}
 #crt{position:fixed;inset:0;z-index:6;pointer-events:none;
@@ -91,8 +92,8 @@ function shade(hex,f){var n=parseInt(hex.slice(1),16),r=n>>16&255,g=n>>8&255,b=n
 function hexA(hex,a){var n=parseInt(hex.slice(1),16);
   return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';}
 function fit(){
-  var portrait=innerHeight>innerWidth;
-  var s=portrait?Math.min(innerWidth/W,innerHeight/H):Math.max(innerWidth/W,innerHeight/H);
+  /* 信息条现在画在画布底部，不能再裁：统一用 contain，保证 480x270 整幅可见 */
+  var s=Math.min(innerWidth/W,innerHeight/H);
   cv.style.width=Math.ceil(W*s)+'px';cv.style.height=Math.ceil(H*s)+'px';}
 addEventListener('resize',fit);fit();
 
@@ -744,7 +745,8 @@ function drawPlanet(p,t){
   /* 转场时非目标行星快速淡出（否则放大后会变成大白块） */
   var fade=intro.active?(isT?1:clamp((2.6-z)/1.5,0,1)):1;
   if(fade<=.01)return;
-  var ov=p.ov||1;
+  /* 重叠不再整颗降透明，交给 ghostOverlap 做局部幽灵重绘 */
+  var ov=1;
   var r=p.r*(1+.1*p.pulse);
   var x=p.x|0,y=p.y|0;
   var breath=.5+.5*Math.sin(t*2.2+p.i);
@@ -787,6 +789,24 @@ function drawPlanet(p,t){
     ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,x,y+r+11);
     ctx.textAlign='left';}
   ctx.globalAlpha=1;
+}
+/* 行星重叠：把被前景盖住的那颗，在前景圆内以半透明重绘一遍
+   （比“整颗降透明度”精准：只有被遮挡的那一片变半透明） */
+function ghostOverlap(back,front){
+  var dx=back.x-front.x,dy=back.y-front.y,rr=(back.r+front.r)*.94;
+  if(dx*dx+dy*dy>=rr*rr)return;
+  var G=back.g;
+  ctx.save();
+  ctx.beginPath();ctx.arc(front.x,front.y,front.r,0,TAU);ctx.clip();
+  ctx.globalAlpha=.34;
+  var g=ctx.createRadialGradient(back.x-back.r*.38,back.y-back.r*.42,back.r*.1,back.x,back.y,back.r*1.02);
+  g.addColorStop(0,shade(G.c,.5));
+  g.addColorStop(.52,G.c);
+  g.addColorStop(1,shade(G.c,-.55));
+  ctx.fillStyle=g;
+  ctx.beginPath();ctx.arc(back.x,back.y,back.r,0,TAU);ctx.fill();
+  ctx.globalAlpha=1;
+  ctx.restore();
 }
 function drawRocket(t){
   var bob=REDUCED?0:Math.sin(t*2.1)*1.6;
@@ -871,10 +891,17 @@ function render(t){
   var order=planets.filter(visible).slice().sort(function(a,b){return a.y-b.y;});
   if(intro.active){var ti=order.indexOf(planets[intro.i]);
     if(ti>=0){order.splice(ti,1);order.push(planets[intro.i]);}}
-  var starDrawn=false;
+  var starDrawn=false,drawn=[];
   for(var oi=0;oi<order.length;oi++){
     if(!starDrawn&&order[oi].y>=SY){drawStarCore(t);starDrawn=true;}
-    drawPlanet(order[oi],t);}
+    var pp=order[oi];
+    drawPlanet(pp,t);
+    /* 被这颗盖住的前几颗，在交叠区里半透明重绘回来 */
+    if(!intro.active&&pp.ov<1){
+      for(var dj=0;dj<drawn.length;dj++)ghostOverlap(drawn[dj],pp);
+    }
+    drawn.push(pp);
+  }
   if(!starDrawn)drawStarCore(t);
   ctx.restore();
   ctx.setTransform(1,0,0,1,shX,shY);
