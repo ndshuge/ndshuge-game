@@ -377,33 +377,46 @@ function drawBase(x,y,open,t){
 function drawMouse(x,y,ph,dir,arm,t){
   x=Math.round(x);y=Math.round(y);
   var f=(Math.floor(ph*9)%2)?0:1,b=f?1:0;
-  var body='#b9b7b4',dark='#8b8986',ear='#ffb6c8';
+  var fur='#b9b7b4',fur2='#8b8986',ear='#ffb6c8';
   ctx.fillStyle='rgba(0,0,14,.45)';ctx.fillRect(x-5,y-1,10,2);
-  /* 尾巴 */
-  ctx.fillStyle=dark;
-  ctx.fillRect(dir>0?x-9:x+6,y-5,3,1);
-  ctx.fillRect(dir>0?x-11:x+9,y-7,2,1);
+  /* 细长尾巴（鼠的招牌） */
+  ctx.fillStyle=fur2;
+  ctx.fillRect(dir>0?x-10:x+7,y-6,3,1);
+  ctx.fillRect(dir>0?x-13:x+10,y-8,3,1);
   /* 腿 */
-  ctx.fillStyle=dark;
+  ctx.fillStyle=fur2;
   if(f){ctx.fillRect(x-3,y-4,2,4);ctx.fillRect(x+1,y-3,2,3);}
   else{ctx.fillRect(x-3,y-3,2,3);ctx.fillRect(x+1,y-4,2,4);}
-  /* 身体 */
-  ctx.fillStyle=body;ctx.fillRect(x-4,y-13+b,8,10);
-  ctx.fillStyle='#dcdad7';ctx.fillRect(x-2,y-10+b,4,6);
-  /* 手臂：arm>0 时向 dir 侧伸出 */
-  ctx.fillStyle=body;
-  if(arm>0){var aL=2+Math.round(arm*2);ctx.fillRect(dir>0?x+4:x-4-aL,y-12+b,aL,2);}
-  else{ctx.fillRect(x-6,y-11+b,2,5);ctx.fillRect(x+4,y-11+b,2,5);}
-  /* 头 */
-  ctx.fillStyle=body;ctx.fillRect(x-4,y-18+b,8,6);
-  /* 耳 */
-  ctx.fillStyle=ear;ctx.fillRect(x-5,y-22+b,3,4);ctx.fillRect(x+2,y-22+b,3,4);
-  ctx.fillStyle=dark;ctx.fillRect(x-4,y-21+b,1,2);ctx.fillRect(x+3,y-21+b,1,2);
-  /* 脸 */
+  /* 身体（矮胖） */
+  ctx.fillStyle=fur;
+  ctx.fillRect(x-4,y-11+b,8,8);
+  ctx.fillRect(x-3,y-13+b,6,2);
+  ctx.fillStyle='#d6d4d1';ctx.fillRect(x-2,y-9+b,4,5);
+  /* 前爪：arm>0 时向 dir 侧伸出（握手） */
+  ctx.fillStyle=fur;
+  if(arm>0){var aL=2+Math.round(arm*2);ctx.fillRect(dir>0?x+4:x-4-aL,y-11+b,aL,2);}
+  else{ctx.fillRect(x-6,y-10+b,2,4);ctx.fillRect(x+4,y-10+b,2,4);}
+  /* 头（上宽下窄的圆头） */
+  ctx.fillStyle=fur;
+  ctx.fillRect(x-4,y-19+b,8,6);
+  ctx.fillRect(x-3,y-20+b,6,1);
+  /* 圆耳朵（大而圆、长在头两侧上方） */
+  ctx.fillStyle=fur;
+  ctx.fillRect(x-6,y-21+b,4,4);ctx.fillRect(x+2,y-21+b,4,4);
+  ctx.fillStyle=ear;
+  ctx.fillRect(x-5,y-20+b,2,2);ctx.fillRect(x+3,y-20+b,2,2);
+  /* 尖吻 + 粉鼻子 */
+  ctx.fillStyle=fur;
+  ctx.fillRect(dir>0?x+4:x-6,y-17+b,2,3);
+  ctx.fillStyle=ear;
+  ctx.fillRect(dir>0?x+5:x-6,y-17+b,1,1);
+  /* 黑豆眼 */
   ctx.fillStyle='#08122e';
-  ctx.fillRect(dir>0?x-1:x-2,y-16+b,1,2);
-  ctx.fillRect(dir>0?x+1:x,y-16+b,1,2);
-  ctx.fillStyle=ear;ctx.fillRect(x+dir*3,y-15+b,1,1);
+  ctx.fillRect(x+dir*1,y-18+b,1,2);
+  ctx.fillRect(x+dir*3,y-18+b,1,2);
+  /* 胡须 */
+  ctx.fillStyle='rgba(240,240,240,.65)';
+  ctx.fillRect(dir>0?x+4:x-7,y-15+b,3,1);
 }
 function drawRabbit(x,y,ph,dir,arm,t){
   x=Math.round(x);y=Math.round(y);
@@ -430,8 +443,8 @@ function drawRabbit(x,y,ph,dir,arm,t){
   ctx.fillStyle='#5fe0c8';ctx.fillRect(x-1,y-20+b,2,3);
   ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillRect(x-3,y-21+b,1,1);
   /* 长耳朵（穿出头盔） */
-  ctx.fillStyle=SUIT;ctx.fillRect(x-4,y-33+b,2,9);ctx.fillRect(x+2,y-33+b,2,9);
-  ctx.fillStyle='#ffb6c8';ctx.fillRect(x-4,y-31+b,2,5);ctx.fillRect(x+2,y-31+b,2,5);
+  ctx.fillStyle=SUIT;ctx.fillRect(x-4,y-36+b,2,12);ctx.fillRect(x+2,y-36+b,2,12);
+  ctx.fillStyle='#ffb6c8';ctx.fillRect(x-4,y-34+b,2,8);ctx.fillRect(x+2,y-34+b,2,8);
 }
 function drawProjector(x,y,t){
   x=Math.round(x);y=Math.round(y);
@@ -447,23 +460,30 @@ function drawProjector(x,y,t){
 }
 function drawIntroScene(t){
   var G=GAMES[intro.i],ph=intro.phase;
-  /* 行星表面：地平线亮带 + 地面压暗 + 地平线 */
-  var hg=ctx.createLinearGradient(0,LY-56,0,LY+30);
-  hg.addColorStop(0,'rgba(0,0,0,0)');
-  hg.addColorStop(.55,hexA(G.g,.20));
-  hg.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=hg;ctx.fillRect(0,LY-56,W,88);
-  ctx.fillStyle='rgba(3,4,14,.42)';ctx.fillRect(0,LY+2,W,H-LY-2);
-  ctx.globalAlpha=.5;ctx.fillStyle=G.g;ctx.fillRect(0,LY,W,1);ctx.globalAlpha=1;
+  /* 行星地表随相机接近才压上来：俯冲一开始不会凭空出现一条悬空地平线 */
+  var ga=clamp((intro.camZ/intro.Z-.30)/.45,0,1);
+  if(ga>.01){
+    var hg=ctx.createLinearGradient(0,LY-56,0,LY+30);
+    hg.addColorStop(0,'rgba(0,0,0,0)');
+    hg.addColorStop(.55,hexA(G.g,.20));
+    hg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.globalAlpha=ga;
+    ctx.fillStyle=hg;ctx.fillRect(0,LY-56,W,88);
+    ctx.fillStyle='rgba(3,4,14,.42)';ctx.fillRect(0,LY+2,W,H-LY-2);
+    ctx.fillStyle=G.g;ctx.fillRect(0,LY,W,1);
+    ctx.globalAlpha=1;
+  }
   if(ph!=='chase')drawBase(BASE_X,LY,intro.doorOpen,t);
-  drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,t,ph==='chase'||ph==='descent');
+  /* 尾焰：巡航 1 → 降落逐减 → 落地关掉 */
+  var fl=ph==='chase'?1:(ph==='descent'?Math.max(0,1-intro.t/INTRO.descent):0);
+  drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,fl,t);
   if(ph==='meet'||ph==='panel'){
     drawRabbit(intro.bx,intro.by,intro.walkPh,-1,intro.barm,t);
     drawMouse(intro.mx,intro.my,intro.walkPh,1,intro.marm,t);
     if(intro.clasp){
       var jy=(Math.sin(t*22)>0)?0:-1;      /* 握手抖动 */
-      ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-13+jy,6,3);
-      ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-13+jy,2,1);
+      ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-12+jy,6,3);
+      ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-12+jy,2,1);
     }
     if(ph==='panel')drawProjector(CX+34,LY,t);
   }
@@ -498,22 +518,25 @@ function drawIntroPanel(t){
   /* 名称 */
   ctx.font=FB16;ctx.fillStyle='#eafcff';
   ctx.shadowColor='#00e5ff';ctx.shadowBlur=8;
-  ctx.fillText(G.t,28,PY+50);
+  ctx.fillText(G.t,28,PY+54);
   ctx.shadowBlur=0;
-  /* 描述 */
-  ctx.font=FB;ctx.fillStyle='rgba(159,212,239,.92)';
+  /* 跳过提示（左下，避开右栏按钮带） */
+  ctx.font=FB;ctx.fillStyle='rgba(150,215,255,.45)';
+  ctx.fillText('点击面板外任意处跳过',28,PY+72);
+  /* 描述：整幅宽度两行 */
+  ctx.fillStyle='rgba(159,212,239,.92)';
   var dl=wrapText(G.d,PW-28,2);
-  for(var i=0;i<dl.length;i++)ctx.fillText(dl[i],28,PY+76+i*17);
-  /* 进入游戏 */
-  var eb={x:PX+PW-152,y:PY+32,w:140,h:36};
+  for(var i=0;i<dl.length;i++)ctx.fillText(dl[i],28,PY+92+i*17);
+  /* 进入游戏（右栏大按钮） */
+  var eb={x:PX+PW-160,y:PY+36,w:148,h:38};
   ctx.fillStyle=hitRect(eb,mouseX,mouseY)?'#8cf6ff':'#00e5ff';
   ctx.fillRect(eb.x,eb.y,eb.w,eb.h);
   ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(eb.x,eb.y+eb.h-4,eb.w,4);
   ctx.fillStyle='#03121e';ctx.textAlign='center';ctx.font=FB16;
-  ctx.fillText('\u8fdb\u5165\u6e38\u620f',eb.x+eb.w/2,eb.y+24);
+  ctx.fillText('\u8fdb\u5165\u6e38\u620f',eb.x+eb.w/2,eb.y+25);
   ctx.textAlign='left';
-  /* 点赞计数 */
-  var lb={x:PX+PW-124,y:PY+12,w:112,h:24};
+  /* 点赞计数（右栏顶部） */
+  var lb={x:PX+PW-128,y:PY+8,w:112,h:24};
   var liked=likeOn[G.key]||isLiked(G.key);
   ctx.fillStyle=liked?'rgba(255,92,122,.22)':(hitRect(lb,mouseX,mouseY)?'rgba(255,110,140,.17)':'rgba(255,110,140,.07)');
   ctx.fillRect(lb.x,lb.y,lb.w,lb.h);
@@ -523,9 +546,6 @@ function drawIntroPanel(t){
   drawHeart(lb.x+11,lb.y+8+(pop>0?-1:0),liked?'#ff5c7a':'#ff8ba0');
   ctx.font=FB;ctx.fillStyle=liked?'#ffd0da':'#ffc2ce';
   ctx.fillText(countText(likeCache[G.key]),lb.x+26,lb.y+17);
-  /* 跳过提示 */
-  ctx.fillStyle='rgba(150,215,255,.45)';
-  ctx.fillText('\u70b9\u51fb\u9762\u677f\u5916\u4efb\u610f\u5904\u8df3\u8fc7',28,PY+PH-8);
   ctx.globalAlpha=1;
   intro.enterR=eb;intro.likeR=lb;intro.panelR={x:PX,y:PY,w:PW,h:PH};
 }
