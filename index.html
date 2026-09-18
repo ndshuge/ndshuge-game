@@ -102,7 +102,9 @@ addEventListener('resize',fit);fit();
    （内圈/中圈各 5 颗 → 72°，外圈 4 颗 → 90°），这是“最小角距”的硬保证；
    每圈再叠一个固定偏移，避免三圈在同一条视线上排成一串。 */
 var ORBR=[66,108,150],ORBP=[.11,.075,.05],SQUASH=.46,SPOTY=SY-2;
-var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[12,11.5,13][i%3],pulse:0,ov:1,ly:undefined};});
+/* Smaller discs on the same orbits: the gap between neighbours grows, so labels stop
+   colliding and stop needing to be pushed away from their planet. */
+var planets=GAMES.map(function(g,i){return{g:g,i:i,orbit:i%3,a:0,sp:0,x:CX,y:SPOTY,r:[8,7.5,9][i%3],pulse:0,ov:1,ly:undefined};});
 (function(){
   for(var o=0;o<3;o++){
     var m=planets.filter(function(p){return p.orbit===o;});
@@ -165,6 +167,11 @@ function $(id){return document.getElementById(id);}
 var NS='ndshuge-game',API='https://abacus.jasoncameron.dev';
 var FB='12px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
 var FB16='16px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+/* Planet labels use a smaller face than everything else: at 12px the names of 14
+   orbiting planets ran into each other constantly, and a label pushed away from its
+   planet stops reading as belonging to it. */
+var FBL='10px "Fusion Pixel 12px Mono latin","Fusion Pixel 12px Mono",monospace';
+var FS_LABEL=10;
 var likeCache={},likeOn={},likePop={};
 function likedKey(k){return 'ng-like-'+k;}
 function isLiked(k){try{return localStorage.getItem(likedKey(k))==='1';}catch(e){return false;}}
@@ -850,7 +857,7 @@ function drawStarCore(t){
 /* ---------- 名字避让：标签沿 y 互相推开 + 避开别的行星盘，缓动跟随 ----------
    行星本体叠有 ghostOverlap 兑底，真正会互相压住的是常显名字：
    每帧把重叠的标签对沿 y 推开，推完限幅（不撞信息条 / 不远离子行星），再缓动落地。 */
-var LBH=13;
+var LBH=11;
 function labelW(s,fs){var w=0;for(var i=0;i<s.length;i++)w+=(s.charCodeAt(i)>255?fs:fs*.55);return w;}
 function relaxLabels(dt){
   var vis=[],i,j,it;
@@ -858,7 +865,7 @@ function relaxLabels(dt){
     if(!visible(p))continue;
     var base=p.y+p.r+11;
     if(p.lx===undefined){p.lx=p.x;p.ly=base;}
-    vis.push({p:p,w:labelW(p.g.t,12),x:p.lx,y:p.ly,bx:p.x,by:base,tx:p.lx,ty:p.ly});}
+    vis.push({p:p,w:labelW(p.g.t,FS_LABEL),x:p.lx,y:p.ly,bx:p.x,by:base,tx:p.lx,ty:p.ly});}
   var n=vis.length;
   if(n>1){
     /* 双轴松弛，目标空间内迭代：哪根轴重叠量小就沿哪根推，推完立即生效 */
@@ -943,16 +950,16 @@ function drawPlanet(p,t){
   /* 常显名字（转场放大时不画；位置经双轴避让，挪远时补一条引线） */
   if(r>6&&!intro.active){
     var lx=(p.lx!==undefined)?p.lx:x;
-    var lyy=(p.ly!==undefined)?p.ly:(y+p.r+11);
+    var lyy=(p.ly!==undefined)?p.ly:(y+p.r+8);
     var ddx=lx-x,ddy=lyy-y;
-    if(ddx*ddx+ddy*ddy>144){
+    if(ddx*ddx+ddy*ddy>100){
       var dl=Math.sqrt(ddx*ddx+ddy*ddy),ux=ddx/dl,uy=ddy/dl;
       ctx.globalAlpha=.30*fade*ov;
       ctx.strokeStyle='#9fd4ef';ctx.lineWidth=1;
       ctx.beginPath();ctx.moveTo(x+ux*(r+2),y+uy*(r+2));ctx.lineTo(lx,lyy-3);ctx.stroke();
     }
     ctx.globalAlpha=.9*fade*ov;
-    ctx.font=FB;
+    ctx.font=FBL;
     ctx.textAlign='center';
     ctx.fillStyle='rgba(0,0,10,.8)';ctx.fillText(G.t,lx+1,lyy+1);
     ctx.fillStyle=sel?'#ffffff':'#cfeaff';ctx.fillText(G.t,lx,lyy);
