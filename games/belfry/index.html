@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>钟楼契约 BELL &amp; BOND</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game" width="512" height="288"></canvas>
+    <div id="legend">
+      WASD 走动 &nbsp;·&nbsp; J / 左键 挥砍 &nbsp;·&nbsp; 空格 / K 交互 &nbsp;·&nbsp; Shift 冲刺 &nbsp;·&nbsp; U 扩契约名额 &nbsp;·&nbsp; E 喂契约者 &nbsp;·&nbsp; 1 / 2 选择 &nbsp;·&nbsp; M 静音
+    </div>
+  </div>
+
+  <!-- 依赖顺序：core 最先（其他文件在 IIFE 顶层就读取常量） -->
+  <script src="src/core.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/music.js"></script>
+  <script src="src/tracks.js"></script>
+  <script src="src/palette.js"></script>
+  <script src="src/atlas.js"></script>
+  <script src="src/sprites.js"></script>
+  <script src="src/tiles.js"></script>
+  <script src="src/crops.js"></script>
+  <script src="src/weapons.js"></script>
+  <script src="src/story.js"></script>
+  <script src="src/daynight.js"></script>
+  <script src="src/bond.js"></script>
+  <script src="src/farm.js"></script>
+  <script src="src/feel.js"></script>
+  <script src="src/combat.js"></script>
+  <script src="src/enemies.js"></script>
+  <script src="src/player.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

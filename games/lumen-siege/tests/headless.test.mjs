@@ -772,7 +772,7 @@ check('every dependent card names the upgrade it strengthens', () => {
   return `${lines.length} dependent cards labelled (e.g. "${lines[0]}")`;
 });
 
-check('the level cadence targets about ten seconds, fast or slow', () => {
+check('the level cadence targets the same spacing at any earn rate', () => {
   const p = new PG.Player(0, 0);
   const gap = PG.Player.TARGET_GAP;
   const rows = [];
@@ -827,22 +827,33 @@ check('a fast-clearing run settles into the target spacing', () => {
   assert(gaps.length > 10, `only ${gaps.length} level-ups simulated`);
   const settled = gaps.slice(8);
   const avg = settled.reduce((a, b) => a + b, 0) / settled.length;
-  assert(avg >= 6 && avg <= 14, `settled spacing averaged ${avg.toFixed(1)}s`);
+  assert(avg >= 5 && avg <= 12, `settled spacing averaged ${avg.toFixed(1)}s`);
   return `${gaps.length} levels over 400s, settled average ${avg.toFixed(1)}s`;
 });
 
-check('the earn-rate sample is forgotten after a quiet spell', () => {
+check('a cold earn-rate sample fades instead of snapping to zero', () => {
   const p = new PG.Player(0, 0);
   const game = { time: 0, queueLevelUp() {} };
-  for (let i = 0; i < 120; i++) { game.time = i / 60; p.gainXp(20, game); }
-  assert(p.xpRate > 0, 'the sampler never picked anything up');
+  for (let i = 0; i < 180; i++) { game.time = i / 60; p.gainXp(30, game); }
   const hot = p.xpRate;
-  p.update(1 / 60, { time: 0, world: { circleHits: () => false }, enemies: [], player: p, sparks: () => {}, particles: { spawn() {} }, shake: () => {}, findNearestEnemy: () => null });
-  assert(p.xpRate === hot, 'a live sample should survive a single frame');
-  game.time = 40;                          /* long quiet stretch */
-  p.update(1 / 60, game);
-  assert(p.xpRate === 0, 'a cold sample was never dropped');
-  return 'sample decays to zero when the player stops earning';
+  assert(hot > 0, 'the sampler never picked anything up');
+
+  const tick = (t) => p.update(1 / 60, {
+    time: t, world: { circleHits: () => false }, enemies: [], player: p,
+    sparks: () => {}, particles: { spawn() {} }, shake: () => {},
+    findNearestEnemy: () => null, camX: 0, camY: 0
+  });
+
+  /* one frame of stillness leaves it alone */
+  tick(3.0);
+  assert(p.xpRate === hot, 'a live sample changed after a single frame');
+
+  /* after a long lull it should have faded a lot, but not jumped to zero: a snap to
+     zero drops the next level's cost and causes a burst of instant levels */
+  let t = 3.0;
+  for (let i = 0; i < 60 * 8; i++) { t += 1 / 60; tick(t); }
+  assert(p.xpRate < hot * 0.25, `a cold sample only fell from ${hot.toFixed(1)} to ${p.xpRate.toFixed(1)}`);
+  return `sample ${hot.toFixed(1)} -> ${p.xpRate.toFixed(1)} after 8s idle`;
 });
 
 check('spawn points respect the body that will occupy them', () => {

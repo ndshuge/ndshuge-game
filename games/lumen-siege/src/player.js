@@ -172,7 +172,7 @@
      a player who is earning faster gets a proportionally larger cost (so the pace
      holds), and a player who is earning slowly gets a *cheaper* level than the plain
      curve would give. Without the second half, a slow late game turns into a wall. */
-  Player.TARGET_GAP = 10;
+  Player.TARGET_GAP = 8;
 
   /* Cost of reaching a given level.
 
@@ -197,14 +197,22 @@
     return Math.floor(Math.max(fromRate, base * 0.15));
   };
 
+  /*: Window and smoothing for the earn-rate sample. Long and heavy on purpose: the
+     pacing should follow the player's overall tempo, not a single burst of kills. */
+  var RATE_WINDOW = 1.2;
+  var RATE_ALPHA = 0.12;
+
   Player.prototype.gainXp = function (value, game) {
-    /* sample the earn rate over half-second windows, smoothed so one big pickup
-       cannot swing the whole curve */
+    /* Sample the earn rate over a long window and smooth it hard. A short window
+       tracks "what happened in the last second", which swings violently when a wave
+       dies at once; pricing the next level off that is what made level-ups arrive
+       erratically (one long wait, then two in a row). This tracks "what tempo the
+       player is operating at", which is the thing worth pacing against. */
     var now = game ? game.time : 0;
     var elapsed = now - this.xpRateAt;
-    if (elapsed >= 0.5) {
+    if (elapsed >= RATE_WINDOW) {
       var instant = (this.xpSinceSample + value) / elapsed;
-      this.xpRate = this.xpRate * 0.6 + instant * 0.4;
+      this.xpRate = this.xpRate * (1 - RATE_ALPHA) + instant * RATE_ALPHA;
       this.xpSinceSample = 0;
       this.xpRateAt = now;
     } else {
@@ -300,11 +308,13 @@
     if (this.dashCd > 0) this.dashCd -= dt;
     if (this.frenzyT > 0) this.frenzyT -= dt;
     if (this.slowT > 0) this.slowT -= dt;
-    /* Drop a stale sample rather than decaying it. A per-frame decay fights the
-       sampler and settles around 88% of the true rate, which silently turns a 15s
-       floor into 13s. Forgetting a cold sample keeps the number honest. */
-    if (this.xpRate > 0 && game && this.lastXpAt > 0 && game.time - this.lastXpAt > 5) {
-      this.xpRate = 0;
+    /* Let a cold sample fade instead of snapping to zero. Zeroing it dropped the
+       next level's cost back to the base curve, so the first wave after a lull
+       levelled several times at once - the "why did I just gain three levels" half
+       of the erratic pacing. */
+    if (this.xpRate > 0 && game && this.lastXpAt > 0 && game.time - this.lastXpAt > 2) {
+      this.xpRate *= Math.pow(0.5, dt);
+      if (this.xpRate < 0.5) this.xpRate = 0;
     }
     if (this.regen > 0 && this.hp < this.maxHp) this.heal(this.regen * dt);
     /* percentage regeneration scales with the health pool, so it stays relevant
