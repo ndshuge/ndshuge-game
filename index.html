@@ -217,6 +217,30 @@ function addLike(key){
   try{fetch(API+'/hit/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
     if(j&&typeof j.value==='number')likeCache[key]=j.value;}).catch(function(){});}catch(e){}
 }
+/* 点赞三态：无记录 / '1'=已赞 / '0'=赞过但已取消。
+   取消的取舍：abacus 的 set 需要 admin key（/create 发放），把它放进公开网页等于
+   任何访客都能篡改全部计数，所以远端不减，本地隐藏自己那一票（显示值 -1）。 */
+function likeState(k){try{return localStorage.getItem(likedKey(k));}catch(e){return null;}}
+function shownCount(k){
+  var v=likeCache[k];
+  if(typeof v!=='number')return undefined;
+  return Math.max(0,v-(likeState(k)==='0'?1:0));
+}
+function toggleLike(key){
+  var st=likeState(key);
+  if(st==='1'){                                   /* 取消：本地隐藏自己那票，远端不动 */
+    try{localStorage.setItem(likedKey(key),'0');}catch(e){}
+    likeOn[key]=false;likePop[key]=1;
+    tone('square',520,300,.10,.06);
+  }else if(st==='0'){                             /* 重新赞：真 hit +1，与取消时的本地隐藏抵消 */
+    try{localStorage.setItem(likedKey(key),'1');}catch(e){}
+    likeOn[key]=true;likePop[key]=1;
+    likeCache[key]=(typeof likeCache[key]==='number'?likeCache[key]:0)+1;
+    tone('square',880,1320,.09,.09);tone('square',1320,1760,.07,.05,.06);
+    try{fetch(API+'/hit/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
+      if(j&&typeof j.value==='number')likeCache[key]=j.value;}).catch(function(){});}catch(e){}
+  }else{addLike(key);}
+}
 function renderInfo(){
   /* 编号/标题/描述已画进 canvas，这里只刷新点赞缓存 */
   var k=GAMES[cur].key;likeOn[k]=isLiked(k);fetchLike(k);
@@ -355,7 +379,7 @@ function introUpdate(dt){
   }else if(ph==='descent'){
     intro.camZ=intro.Z;intro.camAX=CX;intro.camAY=LY;
     intro.rx=ROCKET_X;intro.scale=2;
-    intro.ry=lerp(LY-46,LY,ease(k));
+    intro.ry=lerp(LY-46,groundY(ROCKET_X),ease(k));   /* 落到弧面：随 x 的真实表面高度 */
     if(k>=1){intro.phase='touch';intro.t=0;touchdown();}
   }else if(ph==='touch'){
     if(k>=1){intro.phase='meet';intro.t=0;}
@@ -396,7 +420,7 @@ function introUpdate(dt){
     if(k>=1){intro.malpha=0;intro.balpha=0;intro.phase='ascend';intro.t=0;liftoff();}
   }else if(ph==='ascend'){
     intro.flameK=ease(k);
-    intro.ry=lerp(LY,LY-46,ease(k));
+    intro.ry=lerp(groundY(ROCKET_X),LY-46,ease(k));
     if(k>=1){intro.phase='recall';intro.t=0;}
   }else if(ph==='recall'){
     var rk=ease(k);
@@ -567,18 +591,34 @@ function drawIntroScene(t){
   var G=GAMES[intro.i],ph=intro.phase;
   /* 行星地表随相机接近才压上来：俯冲一开始不会凭空出现一条悬空地平线 */
   var ga=clamp((intro.camZ/intro.Z-.30)/.45,0,1);
+  var CCY=LY+intro.arcR, RR=intro.arcR;      /* 放大后行星的屏幕圆心/半径：弧面才是地面 */
   if(ga>.01){
-    var hg=ctx.createLinearGradient(0,LY-56,0,LY+30);
+    /* 大气亮带：径向渐变环，跟着弧线走（原来的水平矩形会悬在弧面上方，看着像另一个平面） */
+    var bw=86,inner=RR-56;
+    var hg=ctx.createRadialGradient(CX,CCY,inner,CX,CCY,inner+bw);
+    var at=56/bw;
     hg.addColorStop(0,'rgba(0,0,0,0)');
-    hg.addColorStop(.55,hexA(G.g,.20));
+    hg.addColorStop(Math.max(0,at-.30),hexA(G.g,.05));
+    hg.addColorStop(Math.min(1,at),hexA(G.g,.20));
+    hg.addColorStop(Math.min(1,at+.22),hexA(G.g,.05));
     hg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.globalAlpha=ga;
-    ctx.fillStyle=hg;ctx.fillRect(0,LY-56,W,88);
-    ctx.fillStyle='rgba(3,4,14,.42)';ctx.fillRect(0,LY+2,W,H-LY-2);
-    ctx.fillStyle=G.g;ctx.fillRect(0,LY,W,1);
+    ctx.globalAlpha=ga;ctx.fillStyle=hg;ctx.fillRect(0,0,W,H);
+    /* 地表压暗：clip 到弧线以下的月牙，只压星球表面，不碰天空 */
+    ctx.save();
+    ctx.beginPath();ctx.arc(CX,CCY,RR,0,Math.PI);ctx.closePath();ctx.clip();
+    var dg=ctx.createRadialGradient(CX,CCY,RR*.985,CX,CCY,RR+380);
+    dg.addColorStop(0,'rgba(3,4,14,.48)');
+    dg.addColorStop(1,'rgba(3,4,14,.06)');
+    ctx.fillStyle=dg;ctx.fillRect(0,0,W,H);
+    /* 沿弧线的 rim light（贴着星球边缘，替代原先那条悬空的水平线） */
+    ctx.globalAlpha=.5*ga;
+    ctx.strokeStyle=G.g;ctx.lineWidth=1;
+    ctx.beginPath();ctx.arc(CX,CCY,RR-.5,Math.PI,TAU);ctx.stroke();
+    ctx.restore();
     ctx.globalAlpha=1;
   }
-  if(ph!=='chase')drawBase(BASE_X,LY,intro.doorOpen,t);
+  var gyR=groundY(ROCKET_X),gyB=groundY(BASE_X),gyP=groundY(CX+34);
+  if(ph!=='chase')drawBase(BASE_X,gyB,intro.doorOpen,t);
   /* 尾焰由状态机维护：降落收、起飞拉满 */
   drawLander(intro.rx,intro.ry,intro.scale,intro.doorOpen,intro.flameK,t);
   if(!RETURNING[ph]){
@@ -590,7 +630,7 @@ function drawIntroScene(t){
         ctx.fillStyle='#ffd54f';ctx.fillRect(CX-3,LY-12+jy,6,3);
         ctx.fillStyle='#ffffff';ctx.fillRect(CX-1,LY-12+jy,2,1);
       }
-      if(ph==='panel')drawProjector(CX+34,LY,t);
+      if(ph==='panel')drawProjector(CX+34,gyP,t);
     }
   }else{
     /* 返回流程：角色按各自 alpha 淡出，投影仪跟着面板淡出 */
@@ -600,7 +640,7 @@ function drawIntroScene(t){
       if(intro.malpha>.01){ctx.globalAlpha=intro.malpha;
         drawMouse(intro.mx,intro.my,intro.walkPh,intro.mdir,intro.marm,t);}
       ctx.globalAlpha=1;
-      if(intro.panel>.02)drawProjector(CX+34,LY,t);
+      if(intro.panel>.02)drawProjector(CX+34,gyP,t);
     }
   }
 }
@@ -608,7 +648,7 @@ function drawIntroPanel(t){
   if(intro.panel<=.02){intro.enterR=intro.likeR=intro.panelR=null;return;}
   var G=GAMES[intro.i],a=ease(intro.panel);
   /* 投影仪光束（打在面板下沿） */
-  var lx=CX+40,lyy=LY-20;
+  var lx=CX+40,lyy=groundY(CX+40)-22;
   ctx.globalAlpha=.10*a;ctx.fillStyle=G.g;
   ctx.beginPath();ctx.moveTo(lx,lyy);ctx.lineTo(PX+8,PY+PH);ctx.lineTo(PX+PW-8,PY+PH);ctx.closePath();ctx.fill();
   ctx.globalAlpha=.16*a;
@@ -668,17 +708,26 @@ function drawIntroPanel(t){
   ctx.fillRect(ax+4,ay-2,2,5);ctx.fillRect(ax+6,ay,7,1);
   ctx.textAlign='left';
   ctx.fillText(backLabel,bx0+arrowW+labelGap,rb.y+20);
-  /* 点赞计数（右栏顶部） */
+  /* 点赞（右栏顶部）：三态 已赞 / 已取消 / 未赞；再点可在已赞与取消间切换 */
   var lb={x:PX+PW-128,y:PY+8,w:112,h:24};
-  var liked=likeOn[G.key]||isLiked(G.key);
-  ctx.fillStyle=liked?'rgba(255,92,122,.22)':(hitRect(lb,mouseX,mouseY)?'rgba(255,110,140,.17)':'rgba(255,110,140,.07)');
+  var st=likeState(G.key);
+  var liked=st==='1',cancelled=st==='0';
+  var hb=hitRect(lb,mouseX,mouseY);
+  ctx.fillStyle=liked?'rgba(255,92,122,.22)':(cancelled?'rgba(150,165,180,.12)':(hb?'rgba(255,110,140,.17)':'rgba(255,110,140,.07)'));
   ctx.fillRect(lb.x,lb.y,lb.w,lb.h);
-  ctx.strokeStyle=liked?'#ff5c7a':'rgba(255,110,140,.55)';ctx.lineWidth=1;
+  ctx.strokeStyle=liked?'#ff5c7a':(cancelled?'rgba(150,165,180,.6)':'rgba(255,110,140,.55)');ctx.lineWidth=1;
   ctx.strokeRect(lb.x+.5,lb.y+.5,lb.w-1,lb.h-1);
   var pop=likePop[G.key]||0;
-  drawHeart(lb.x+11,lb.y+8+(pop>0?-1:0),liked?'#ff5c7a':'#ff8ba0');
-  ctx.font=FB;ctx.fillStyle=liked?'#ffd0da':'#ffc2ce';
-  ctx.fillText(countText(likeCache[G.key]),lb.x+26,lb.y+17);
+  var hc=liked?'#ff5c7a':(cancelled?'#79899a':'#ff8ba0');
+  drawHeart(lb.x+11,lb.y+8+(pop>0?-1:0),hc);
+  ctx.font=FB;ctx.fillStyle=liked?'#ffd0da':(cancelled?'#9aa8b6':'#ffc2ce');
+  var cnt=shownCount(G.key);
+  ctx.fillText(countText(cnt),lb.x+26,lb.y+17);
+  if(hb&&(liked||cancelled)){
+    var tip=liked?'\u53d6\u6d88':'\u8d5e\u56de\u6765';
+    ctx.fillStyle='rgba(150,215,255,.6)';
+    ctx.fillText(tip,lb.x+26+ctx.measureText(countText(cnt)).width+6,lb.y+17);
+  }
   ctx.globalAlpha=1;
   /* 出口提示：面板下方、角色上方，说清两条路 */
   ctx.globalAlpha=a*.5;
@@ -738,11 +787,7 @@ cv.addEventListener('pointerdown',function(e){
     /* 面板阶段（淡入中按钮也响应，避免误跳进游戏）：进入 / 点赞 / 返回；面板外 = 跳过进入 */
     if(intro.phase==='panel'){
       if(hitRect(intro.enterR,mx,my)){go();return;}
-      if(hitRect(intro.likeR,mx,my)){
-        var lk=GAMES[intro.i].key;
-        if(isLiked(lk)){likePop[lk]=1;tone('square',420,300,.08,.05);}  /* 已赞：心跳反馈，不重复计数 */
-        else addLike(lk);
-        return;}
+      if(hitRect(intro.likeR,mx,my)){toggleLike(GAMES[intro.i].key);return;}
       if(hitRect(intro.backR,mx,my)){launchReturn();return;}
       if(hitRect(intro.panelR,mx,my))return;
     }
