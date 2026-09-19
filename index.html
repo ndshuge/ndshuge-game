@@ -952,12 +952,15 @@ function drawPlanet(p,t){
       ctx.strokeStyle=G.g;ctx.lineWidth=2*worldLW;
       ctx.beginPath();ctx.arc(x,y,r+L[li][0],0,TAU);ctx.stroke();}
   }
-  /* 球体 */
+  /* 球体；转场放大时改顶光：可见弧面只是球顶一小片，原左上 45° 光会让弧面左亮右暗，
+     基地/兔子所在的右侧陷进暗部，看起来星球偏左、角色浮空 */
   ctx.globalAlpha=fade*ov;
-  var g=ctx.createRadialGradient(x-r*.38,y-r*.42,r*.1,x,y,r*1.02);
+  var hx=x-(intro.active?0:r*.38), hy=y-(intro.active?.5*r:r*.42);
+  var dk=intro.active?-.38:-.55;
+  var g=ctx.createRadialGradient(hx,hy,r*.1,x,y,r*1.02);
   g.addColorStop(0,shade(G.c,.5));
   g.addColorStop(.52,G.c);
-  g.addColorStop(1,shade(G.c,-.55));
+  g.addColorStop(1,shade(G.c,dk));
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
   ctx.fillStyle='rgba(255,255,255,.38)';
   ctx.beginPath();ctx.ellipse(x-r*.42,y-r*.45,r*.16,r*.1,-.6,0,TAU);ctx.fill();
