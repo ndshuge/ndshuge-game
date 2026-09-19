@@ -202,8 +202,11 @@ function isLiked(k){try{return localStorage.getItem(likedKey(k))==='1';}catch(e)
 function countText(v){if(typeof v!=='number')return '\u00b7';
   return v>=1000?(v/1000).toFixed(1).replace(/\.0$/,'')+'k':String(v);}
 function fetchLike(key){
-  try{fetch(API+'/get/'+NS+'/'+key).then(function(r){return r.json();}).then(function(j){
-    if(j&&typeof j.value==='number')likeCache[key]=j.value;}).catch(function(){});}catch(e){}
+  try{fetch(API+'/get/'+NS+'/'+key).then(function(r){
+    if(!r.ok){likeCache[key]=0;return;}   /* 404 = 还没人赞过，显示 0 而不是未知 */
+    return r.json().then(function(j){
+      likeCache[key]=(j&&typeof j.value==='number')?j.value:0;});
+  }).catch(function(){});}catch(e){}        /* 网络失败：保持未知（'·'），不误报为 0 */
 }
 function addLike(key){
   if(isLiked(key))return;
