@@ -274,6 +274,7 @@ function launchWarp(i){
   cur=i;
   try{localStorage.setItem('armory_index',String(i));}catch(e){}
   if(REDUCED){location.href=GAMES[i].href;return;}
+  renderInfo();                        /* 选中变了：面板要显示这颗的赞数与已赞态，必须先拉 */
   var p=planets[i];
   audio();
   intro.active=true;intro.i=i;intro.phase='chase';intro.t=0;
@@ -731,10 +732,14 @@ cv.addEventListener('pointerdown',function(e){
   var m=toGame(e),mx=m[0],my=m[1];mouseX=mx;mouseY=my;sx0=mx;sy0=my;
   if(flash.active)return;
   if(intro.active){
-    /* 面板阶段：进入 / 点赞 / 返回 / 面板内空白；面板外任意处 = 跳过进入 */
-    if(intro.phase==='panel'&&intro.panel>=1){
+    /* 面板阶段（淡入中按钮也响应，避免误跳进游戏）：进入 / 点赞 / 返回；面板外 = 跳过进入 */
+    if(intro.phase==='panel'){
       if(hitRect(intro.enterR,mx,my)){go();return;}
-      if(hitRect(intro.likeR,mx,my)){addLike(GAMES[intro.i].key);return;}
+      if(hitRect(intro.likeR,mx,my)){
+        var lk=GAMES[intro.i].key;
+        if(isLiked(lk)){likePop[lk]=1;tone('square',420,300,.08,.05);}  /* 已赞：心跳反馈，不重复计数 */
+        else addLike(lk);
+        return;}
       if(hitRect(intro.backR,mx,my)){launchReturn();return;}
       if(hitRect(intro.panelR,mx,my))return;
     }

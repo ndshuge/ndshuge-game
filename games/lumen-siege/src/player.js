@@ -149,12 +149,16 @@
     this.slowFactor = 0;
     this.laserHeat = 0;
     this.shotCount = 0;
-    /* live earn-rate tracking: the next level's cost is derived from how fast the
-       player is actually earning, so a fast run cannot chain levels forever */
-    this.xpRate = 0;
-    this.xpRateAt = 0;
-    this.xpSinceSample = 0;
-    this.lastXpAt = 0;
+    /* Pacing basis: total experience earned this run divided by the run's elapsed
+       time. Deliberately not a sliding window. A window cannot help but describe the
+       player's last few seconds, so the level cost climbs while a pack is dying and
+       falls the moment they break off to reposition. A falling cost is the whole
+       problem: banked progress suddenly covers the next level, and the same wave
+       that should have left the bar half full instead buys two levels. A running
+       average has no such mood. Both its terms only grow, so it drifts smoothly and
+       never jumps, and late in a long run it is very nearly a constant. */
+    this.totalEarned = 0;
+    this.earnRate = 0;
 
     this.walkPhase = 0;
     this.level = 1;
@@ -174,6 +178,11 @@
      curve would give. Without the second half, a slow late game turns into a wall. */
   Player.TARGET_GAP = 8;
 
+  /*: Floor on the elapsed term of the running average, in seconds. Only matters at
+     the very start of a run, when dividing by a fraction of a second would read any
+     pickup as a huge rate and lock the cost sky-high. */
+  Player.RATE_MIN_ELAPSED = 5;
+
   /* Cost of reaching a given level.
 
      The rate term is measured from xp actually COLLECTED, not dropped: a player who
@@ -186,41 +195,32 @@
      only so that a stale or zero sample cannot crash the cost to nothing. */
   Player.prototype.demandFor = function (level) {
     var base = 7 + level * 4.2 + Math.pow(level, 1.12);
-    /* Before the sampler has a reading there is nothing to pace against. */
-    if (this.xpRate <= 0) return Math.floor(base);
-    /* Price the level at what the player actually earns in TARGET_GAP seconds.
-       No upper bound on purpose: an earlier version capped this relative to the
-       base curve, which at low levels squeezed a 10-second level down to 5 and
-       reintroduced the exact problem it was meant to solve. */
-    var fromRate = this.xpRate * Player.TARGET_GAP;
+    /* Before any experience has been earned there is nothing to pace against. */
+    if (this.earnRate <= 0) return Math.floor(base);
+    /* Price the level at what the player earns in TARGET_GAP seconds, measured over
+       the whole run. No upper bound on purpose: an earlier version capped this
+       relative to the base curve, which at low levels squeezed a 10-second level
+       down to 5 and reintroduced the exact problem it was meant to solve. */
+    var fromRate = this.earnRate * Player.TARGET_GAP;
     /* A small floor so a near-zero reading cannot make levels free. */
     return Math.floor(Math.max(fromRate, base * 0.15));
   };
 
-  /*: Window and smoothing for the earn-rate sample. Long and heavy on purpose: the
-     pacing should follow the player's overall tempo, not a single burst of kills. */
-  var RATE_WINDOW = 1.2;
-  var RATE_ALPHA = 0.12;
-
   Player.prototype.gainXp = function (value, game) {
-    /* Sample the earn rate over a long window and smooth it hard. A short window
-       tracks "what happened in the last second", which swings violently when a wave
-       dies at once; pricing the next level off that is what made level-ups arrive
-       erratically (one long wait, then two in a row). This tracks "what tempo the
-       player is operating at", which is the thing worth pacing against. */
+    /* The running average is fed the raw drop value, not the modified payout: if the
+       cost followed the boosted number, an "xp +20%" card would raise the next
+       level's cost by the same 20% and the card would do nothing at all. */
     var now = game ? game.time : 0;
-    var elapsed = now - this.xpRateAt;
-    if (elapsed >= RATE_WINDOW) {
-      var instant = (this.xpSinceSample + value) / elapsed;
-      this.xpRate = this.xpRate * (1 - RATE_ALPHA) + instant * RATE_ALPHA;
-      this.xpSinceSample = 0;
-      this.xpRateAt = now;
-    } else {
-      this.xpSinceSample += value;
-    }
+    this.totalEarned += value;
+    /* The elapsed term has a floor. In the opening seconds a single pickup divided by
+       a tiny elapsed time reads as an enormous rate, which would price the next level
+       out of reach for the rest of the run ("0 levels in ten minutes" was measured
+       with the divider at 0.05s). Holding the denominator at a few seconds until the
+       run has one only costs the first few seconds of accuracy, and the base curve is
+       still underneath as a floor. */
+    if (now > 0) this.earnRate = this.totalEarned / Math.max(now, Player.RATE_MIN_ELAPSED);
 
     this.xp += value * this.xpMult;
-    this.lastXpAt = now;
     var guard = 0;
     while (this.xp >= this.xpToNext && guard++ < 60) {
       this.xp -= this.xpToNext;
@@ -308,14 +308,11 @@
     if (this.dashCd > 0) this.dashCd -= dt;
     if (this.frenzyT > 0) this.frenzyT -= dt;
     if (this.slowT > 0) this.slowT -= dt;
-    /* Let a cold sample fade instead of snapping to zero. Zeroing it dropped the
-       next level's cost back to the base curve, so the first wave after a lull
-       levelled several times at once - the "why did I just gain three levels" half
-       of the erratic pacing. */
-    if (this.xpRate > 0 && game && this.lastXpAt > 0 && game.time - this.lastXpAt > 2) {
-      this.xpRate *= Math.pow(0.5, dt);
-      if (this.xpRate < 0.5) this.xpRate = 0;
-    }
+    /* The pacing basis needs no decay term any more. An earlier version faded a
+       stale recent-rate sample, and the fade itself was a source of the jumps: a
+       falling cost made already-banked progress buy an extra level. A running
+       average is diluted by idle time rather than decaying, so it sags gradually
+       and never steps. */
     if (this.regen > 0 && this.hp < this.maxHp) this.heal(this.regen * dt);
     /* percentage regeneration scales with the health pool, so it stays relevant
        after a pile of max-hp upgrades instead of becoming a rounding error */

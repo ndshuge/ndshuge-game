@@ -780,7 +780,7 @@ check('the level cadence targets the same spacing at any earn rate', () => {
      spacing. This is the two-sided requirement: the old version only ever made the
      cost larger, so a slow late game turned into a wall. */
   for (const rate of [6, 20, 60, 150, 400]) {
-    p.xpRate = rate;
+    p.earnRate = rate;
     for (const lv of [1, 5, 12, 25, 40]) {
       const seconds = p.demandFor(lv) / rate;
       assert(seconds >= gap * 0.5 && seconds <= gap * 1.6,
@@ -797,18 +797,53 @@ check('a build that outpaces the base curve does not get punished', () => {
      and allowing the cost to fall below the base curve fixes that half. */
   const slow = new PG.Player(0, 0);
   slow.level = 20;
-  slow.xpRate = 3;                     /* barely collecting anything */
+  slow.earnRate = 3;                   /* barely collecting anything */
   const cheap = slow.demandFor(20);
   const baseCurve = 7 + 20 * 4.2 + Math.pow(20, 1.12);
   assert(cheap <= baseCurve, `a slow player was charged ${cheap} vs base ${baseCurve.toFixed(0)}`);
 
   const fast = new PG.Player(0, 0);
   fast.level = 20;
-  fast.xpRate = 120;
+  fast.earnRate = 120;
   const cost = fast.demandFor(20);
-  const seconds = cost / fast.xpRate;
+  const seconds = cost / fast.earnRate;
   assert(seconds >= 8 && seconds <= 12, `a fast player waited ${seconds.toFixed(1)}s`);
   return `slow pays ${cheap}, fast pays ${cost} (~${seconds.toFixed(1)}s)`;
+});
+
+check('the cost is set by the whole run, so it does not move under the player', () => {
+  /* The player-visible complaint this replaces: "sometimes a level takes ages,
+     sometimes two arrive at once". The cause was a cost derived from a recent-rate
+     window, which climbed while a pack was dying and sagged the moment the player
+     broke off to reposition - so banked progress could suddenly cover two levels.
+     A running average cannot sag like that. This drives real play (kill, then run
+     with no income) and demands that the cost stay flat and that no two levels land
+     back to back. */
+  const p = new PG.Player(0, 0);
+  const game = { time: 0, queueLevelUp() {} };
+  const costs = [];
+  const gaps = [];
+  let lastAt = 0;
+  let prev = p.level;
+  for (let i = 0; i < 60 * 900; i++) {
+    const t = i / 60;
+    game.time = t;
+    if ((t % 4) < 2.5) p.gainXp(280 / 2.5 / 60, game);   /* 2.5s killing, 1.5s idle */
+    if (p.level > prev) {
+      gaps.push(t - lastAt);
+      costs.push(p.demandFor(p.level));
+      lastAt = t;
+      prev = p.level;
+    }
+  }
+  assert(costs.length > 20, `only ${costs.length} level-ups to judge`);
+  const settledCosts = costs.slice(10);
+  const lo = Math.min(...settledCosts), hi = Math.max(...settledCosts);
+  assert(hi <= lo * 1.25, `the cost swung ${(hi / lo).toFixed(2)}x (${lo}..${hi})`);
+  const settledGaps = gaps.slice(10);
+  const closest = Math.min(...settledGaps);
+  assert(closest >= 3, `two levels landed ${closest.toFixed(1)}s apart`);
+  return `cost held within ${(hi / lo).toFixed(2)}x, closest pair ${closest.toFixed(1)}s apart`;
 });
 
 check('a fast-clearing run settles into the target spacing', () => {
@@ -831,29 +866,29 @@ check('a fast-clearing run settles into the target spacing', () => {
   return `${gaps.length} levels over 400s, settled average ${avg.toFixed(1)}s`;
 });
 
-check('a cold earn-rate sample fades instead of snapping to zero', () => {
+check('idle time dilutes the pace basis, it never steps it', () => {
+  /* A decaying sample was the second half of the jumps: the fade lowered the cost,
+     so already-banked progress bought an extra level. Dilution has no such edge -
+     it moves the average a little every frame and never in a jump. */
   const p = new PG.Player(0, 0);
   const game = { time: 0, queueLevelUp() {} };
-  for (let i = 0; i < 180; i++) { game.time = i / 60; p.gainXp(30, game); }
-  const hot = p.xpRate;
-  assert(hot > 0, 'the sampler never picked anything up');
+  for (let i = 0; i < 60 * 60; i++) { game.time = i / 60; p.gainXp(120 / 60, game); }
+  const hot = p.earnRate;
+  assert(hot > 100, `the average never picked anything up (${hot.toFixed(1)})`);
 
-  const tick = (t) => p.update(1 / 60, {
-    time: t, world: { circleHits: () => false }, enemies: [], player: p,
-    sparks: () => {}, particles: { spawn() {} }, shake: () => {},
-    findNearestEnemy: () => null, camX: 0, camY: 0
-  });
-
-  /* one frame of stillness leaves it alone */
-  tick(3.0);
-  assert(p.xpRate === hot, 'a live sample changed after a single frame');
-
-  /* after a long lull it should have faded a lot, but not jumped to zero: a snap to
-     zero drops the next level's cost and causes a burst of instant levels */
-  let t = 3.0;
-  for (let i = 0; i < 60 * 8; i++) { t += 1 / 60; tick(t); }
-  assert(p.xpRate < hot * 0.25, `a cold sample only fell from ${hot.toFixed(1)} to ${p.xpRate.toFixed(1)}`);
-  return `sample ${hot.toFixed(1)} -> ${p.xpRate.toFixed(1)} after 8s idle`;
+  let prev = p.earnRate;
+  let worstStep = 0;
+  let t = 60;
+  for (let i = 0; i < 60 * 8; i++) {
+    t += 1 / 60;
+    game.time = t;
+    p.gainXp(0, game);                    /* idle frame: nothing earned */
+    worstStep = Math.max(worstStep, prev - p.earnRate);
+    prev = p.earnRate;
+  }
+  assert(worstStep < hot * 0.05, `the average stepped ${worstStep.toFixed(2)} in a single frame`);
+  assert(p.earnRate < hot, 'idle time did not dilute the average at all');
+  return `${hot.toFixed(0)}/s -> ${p.earnRate.toFixed(0)}/s over 8s idle, largest step ${worstStep.toFixed(3)}`;
 });
 
 check('spawn points respect the body that will occupy them', () => {
