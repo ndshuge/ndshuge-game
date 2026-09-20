@@ -589,6 +589,18 @@ function drawProjector(x,y,t){
 }
 function drawIntroScene(t){
   var G=GAMES[intro.i],ph=intro.phase;
+  /* recall（相机拉回）阶段：整个地表场景作为一个整体跟随行星缩放。
+     行星画在相机空间（随 camZ 缩到 camAX,camAY），而本函数此前画在屏幕
+     空间——行星缩成小珠时基地还是 28px 钉在原地，突兀。解法不是逐个
+     元素加跟随，而是把基地/火箭/角色/大气光效整层按 camZ/Z 等比缩到
+     (camAX,camAY)（行星顶部在屏幕上的实时位置），一处 transform 全部生效。 */
+  var zf=ph==='recall'?clamp(intro.camZ/intro.Z,0,1):1;
+  if(zf<.98){
+    ctx.save();
+    ctx.translate(intro.camAX,intro.camAY);
+    ctx.scale(zf,zf);
+    ctx.translate(-CX,-LY);
+  }
   /* 行星地表随相机接近才压上来：俯冲一开始不会凭空出现一条悬空地平线 */
   var ga=clamp((intro.camZ/intro.Z-.30)/.45,0,1);
   var CCY=LY+intro.arcR, RR=intro.arcR;      /* 放大后行星的屏幕圆心/半径：弧面才是地面 */
@@ -643,6 +655,7 @@ function drawIntroScene(t){
       if(intro.panel>.02)drawProjector(CX+34,gyP,t);
     }
   }
+  if(zf<.98)ctx.restore();
 }
 function drawIntroPanel(t){
   if(intro.panel<=.02){intro.enterR=intro.likeR=intro.panelR=null;return;}
