@@ -4,6 +4,10 @@
 
 **[进入游戏大厅 →](https://ndshuge.github.io/ndshuge-game/)** · [其他作品](https://ndshuge.github.io/ndshuge-galaxy/)
 
+![LUMEN SIEGE 光核围城真实网页截图](docs/screenshots/lumen.png)
+
+*截图展示游戏厅中的《光核围城》，并非游戏厅大厅首页。*
+
 ## 15 款游戏
 
 | 游戏 | 风格 | 在线试玩 |
