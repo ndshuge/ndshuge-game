@@ -1,0 +1,27 @@
+name: LUMEN SIEGE tests
+
+on:
+  push:
+    paths:
+      - 'games/lumen-siege/**'
+      - '.github/workflows/lumen-siege.yml'
+  pull_request:
+    paths:
+      - 'games/lumen-siege/**'
+      - '.github/workflows/lumen-siege.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run smoke and headless tests
+        run: node games/lumen-siege/tests/run-all.mjs
