@@ -47,9 +47,28 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   var hint = document.getElementById('hint');
 
   /* ================= 渲染器 / 场景 / 相机 ================= */
+  var rules = window.WW2Gameplay;
+  if (!rules) throw new Error('Missing gameplay-utils.js');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(rules.renderPixelRatio(window.innerWidth, window.innerHeight, window.devicePixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
+  // F3 shows measured frame rate, draw calls and the actual render resolution.
+  // The high-DPI pixel budget reduces fill cost without changing gameplay FOV.
+  var perfHud = document.createElement('div');
+  perfHud.id = 'ww2-perf-hud';
+  perfHud.style.cssText = 'position:fixed;left:12px;top:44px;z-index:100;pointer-events:none;display:none;padding:7px 10px;background:rgba(0,0,0,.78);color:#b8f8d3;border:1px solid #6ca89a;font:12px monospace;white-space:pre';
+  document.body.appendChild(perfHud);
+  var perfShown = false, perfFrameCount = 0, perfLastTime = performance.now(), perfFps = 0;
+  function updatePerfHud(now) {
+    perfFrameCount++;
+    var elapsed = now - perfLastTime;
+    if (elapsed < 1000) return;
+    perfFps = Math.round(perfFrameCount * 1000 / elapsed);
+    perfFrameCount = 0;
+    perfLastTime = now;
+    if (perfShown) perfHud.textContent = 'FPS ' + perfFps + '  |  draw calls ' + renderer.info.render.calls + '\n' +
+      renderer.domElement.width + ' x ' + renderer.domElement.height + ' px  |  DPR ' + renderer.getPixelRatio().toFixed(2);
+  }
   // v2.1 阴影
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -3587,31 +3606,10 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
 
   function movePlayerAxis(axis, delta) {
     if (delta === 0) return;
-    var R = PLAYER_R;
     var other = axis === 'x' ? 'z' : 'x';
-    var minA = axis === 'x' ? 'minX' : 'minZ';
-    var maxA = axis === 'x' ? 'maxX' : 'maxZ';
-    var minO = axis === 'x' ? 'minZ' : 'minX';
-    var maxO = axis === 'x' ? 'maxZ' : 'maxX';
-    var np = player.pos[axis] + delta;
-    // 迭代修正：一次碰撞修正后若仍与其它墙重叠（墙体重叠区），继续修正，最多 3 轮
-    for (var iter = 0; iter < 3; iter++) {
-      var blocked = false;
-      for (var i = 0; i < WALLS.length; i++) {
-        var w = WALLS[i];
-        if (np > w[minA] - R && np < w[maxA] + R && player.pos[other] > w[minO] - R && player.pos[other] < w[maxO] + R) {
-          if (!w.step || player.pos.y - 1.7 < w.h - 0.05) {
-            np = delta > 0 ? w[minA] - R : w[maxA] + R;
-            blocked = true;
-            break;
-          }
-        }
-      }
-      if (!blocked) break;
-    }
-    player.pos[axis] = np;
+    player.pos[axis] = rules.sweepAxis(player.pos[axis], player.pos[other], delta,
+      axis, PLAYER_R, player.pos.y - 1.7, WALLS);
   }
-
   /* ================= 刷怪 ================= */
   var spawnTimer = 2.5;
 
@@ -4091,6 +4089,17 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     radarCtx.restore();
   }
 
+  // Radar markers only need about 15 Hz; avoid redrawing the 150px canvas
+  // on every high-refresh WebGL frame (e.g. 120/300 Hz displays).
+  var radarLastPaint = -Infinity, radarPaintCount = 0;
+  function drawRadarWhenDue() {
+    var now = performance.now();
+    if (now - radarLastPaint < 1000 / 15) return;
+    radarLastPaint = now;
+    radarPaintCount++;
+    drawRadar();
+  }
+
   /* ================= HUD ================= */
   var hudTimer = 0;
   function updateHUD(dt) {
@@ -4479,6 +4488,15 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
 
   /* ================= 输入 ================= */
   document.addEventListener('keydown', function (ev) {
+    if (ev.code === 'F3') {
+      ev.preventDefault();
+      if (!ev.repeat) {
+        perfShown = !perfShown;
+        perfHud.style.display = perfShown ? 'block' : 'none';
+        if (perfShown) perfHud.textContent = 'Measuring FPS...';
+      }
+      return;
+    }
     keys[ev.code] = true;
     // 剧情过场：空格 / Enter 确认继续
     if (storyEl.style.display === 'flex' && storyEl._finish && (ev.code === 'Space' || ev.code === 'Enter')) {
@@ -4486,12 +4504,11 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
       return;
     }
     if (state !== 'play') return;
-    if (ev.code === 'Digit1') switchWeapon(0);
-    if (ev.code === 'Digit2') switchWeapon(1);
-    if (ev.code === 'Digit3') switchWeapon(2);
-    if (ev.code === 'Digit4') switchWeapon(3);
-    if (ev.code === 'Digit5') switchWeapon(4);
-    if (ev.code === 'KeyQ') switchWeapon((weaponIdx + 1) % WEAPONS.length);
+    if (ev.code === 'Space') ev.preventDefault();
+    // A held Q/number key must change the weapon only once per key press.
+    var slot = rules.weaponKey(ev.code, ev.repeat);
+    if (slot === 5) switchWeapon((weaponIdx + 1) % WEAPONS.length);
+    else if (slot >= 0) switchWeapon(slot);
   });
   document.addEventListener('keyup', function (ev) { keys[ev.code] = false; });
 
@@ -4565,6 +4582,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   window.addEventListener('resize', function () {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(rules.renderPixelRatio(window.innerWidth, window.innerHeight, window.devicePixelRatio));
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
@@ -4597,7 +4615,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
       if (settings.mode === 'campaign') updateCampaign(dt);
       else if (settings.mode === 'hold') updateHold(dt);
       else spawnManager(dt);
-      drawRadar();
+      drawRadarWhenDue();
       updateHUD(dt);
       // 战场氛围：远处炮火
       artilleryT -= dt;
@@ -4630,6 +4648,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     sun.target.position.copy(player.pos);
 
     renderer.render(scene, camera);
+    updatePerfHud(performance.now());
   }
 
   /* ================= 启动 ================= */
@@ -4718,6 +4737,10 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     zoom: function (on) { zoomed = !!on; },
     getPos: function () { return player.pos.toArray(); },
     getCam: function () { return camera.position.toArray(); },
+    getRenderInfo: function () { return { pixelRatio: renderer.getPixelRatio(), width: renderer.domElement.width, height: renderer.domElement.height, fps: perfFps, visible: perfShown }; },
+    moveAxisForTest: function (axis, delta) { movePlayerAxis(axis, delta); return player.pos[axis]; },
+    getCollisionWalls: function () { return WALLS.map(function (w) { return { minX:w.minX,maxX:w.maxX,minZ:w.minZ,maxZ:w.maxZ,h:w.h,step:!!w.step }; }); },
+    getRadarPaints: function () { return radarPaintCount; },
     diagEnemy: function () {
       return enemies.map(function (e) {
         return { s: e.state, st: e.stateT.toFixed(1), fc: e.fireCd.toFixed(2), x: e.pos.x.toFixed(1), z: e.pos.z.toFixed(1), y: e.pos.y.toFixed(2), hp: e.hp, alive: e.alive };
@@ -4732,7 +4755,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
           if (settings.mode === 'campaign') updateCampaign(dt);
           else if (settings.mode === 'hold') updateHold(dt);
           else spawnManager(dt);
-          drawRadar();
+          drawRadarWhenDue();
           updateHUD(dt);
         }
         updateParticles(dt);
