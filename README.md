@@ -58,3 +58,7 @@ node games/lumen-siege/tests/run-all.mjs
 4. 引入第三方音乐、图片、字体、模型时核对授权。整体开源许可证尚待确认，公开源码不等于自动准许商业再利用。
 
 [报告问题](https://github.com/ndshuge/ndshuge-game/issues) · [作者主页](https://github.com/ndshuge)
+
+## 安全与素材审查
+
+[游戏素材来源与版权清单](docs/ASSET_PROVENANCE.md)
