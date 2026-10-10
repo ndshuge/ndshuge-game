@@ -1,37 +1,64 @@
-# ndshuge-game
+# 鼠哥游戏厅 · SHUGE GAMES
 
-鼠哥的游戏合集。所有游戏通过 GitHub Pages 托管，打开即玩。
+> 15 款浏览器小游戏：物理沙盒、像素动作、弹幕、生存挑战与音乐节奏，打开即玩。
 
-**在线地址：https://ndshuge.github.io/ndshuge-game/**
+**[进入游戏大厅 →](https://ndshuge.github.io/ndshuge-game/)** · [其他作品](https://ndshuge.github.io/ndshuge-galaxy/)
 
-## 收录游戏
+![LUMEN SIEGE 光核围城真实网页截图](docs/screenshots/lumen.png)
 
-| 游戏 | 目录 | 类型 |
+*截图展示游戏厅中的《光核围城》，并非游戏厅大厅首页。*
+
+## 15 款游戏
+
+| 游戏 | 风格 | 在线试玩 |
 | --- | --- | --- |
-| 西线前线 | `games/ww2-frontline/` | FPS · 二战战役 |
-| 凝时 STILL | `games/still/` | 弹幕 · 时停 |
-| 重力花园 | `games/gravity-garden/` | 物理解压 |
-| 墨途 | `games/motu/` | 水墨平台 |
-| 回声小径 | `games/echo-trail/` | 像素 · 回声 |
-| 鼓点乒乓 | `games/beat-paddle/` | 音游 · 街机 |
-| 慢光 LIGHTLAG | `games/lightlag/` | 太空 · 防御 |
-| VOCALON! 节拍革命 | `games/vocalon-chaos/` | 音游 · 原曲 |
-| 像素乒乓 CAT vs RAT | `games/pixel-pong/` | 街机 · 对决 |
-| 回带 REWINDER | `games/rewinder/` | 像素 · 时间 |
-| 拾色 HUEBOUND | `games/shise/` | 射击 · 涂色 |
-| 一闪 · 像素居合斩 | `games/issen/` | 动作 · 居合 |
-| 残光斩 GHOSTSLASH | `games/ghostslash/` | 动作 · 闪斩 |
+| 西线前线 | 3D FPS · 二战 | [Play](https://ndshuge.github.io/ndshuge-game/games/ww2-frontline/) |
+| 凝时 STILL | 弹幕 · 时停 | [Play](https://ndshuge.github.io/ndshuge-game/games/still/) |
+| 重力花园 | 物理沙盒 | [Play](https://ndshuge.github.io/ndshuge-game/games/gravity-garden/) |
+| 墨途 | 水墨平台 | [Play](https://ndshuge.github.io/ndshuge-game/games/motu/) |
+| 回声小径 | 像素 · 回声 | [Play](https://ndshuge.github.io/ndshuge-game/games/echo-trail/) |
+| 鼓点乒乓 | 节奏街机 | [Play](https://ndshuge.github.io/ndshuge-game/games/beat-paddle/) |
+| 慢光 LIGHTLAG | 太空防御 | [Play](https://ndshuge.github.io/ndshuge-game/games/lightlag/) |
+| VOCALON! 节拍革命 | 音游 | [Play](https://ndshuge.github.io/ndshuge-game/games/vocalon-chaos/) |
+| 像素乒乓 CAT vs RAT | 街机对战 | [Play](https://ndshuge.github.io/ndshuge-game/games/pixel-pong/) |
+| 回带 REWINDER | 时间机制 | [Play](https://ndshuge.github.io/ndshuge-game/games/rewinder/) |
+| 拾色 HUEBOUND | 涂色射击 | [Play](https://ndshuge.github.io/ndshuge-game/games/shise/) |
+| 一闪 | 像素居合斩 | [Play](https://ndshuge.github.io/ndshuge-game/games/issen/) |
+| 残光斩 GHOSTSLASH | 高速动作 | [Play](https://ndshuge.github.io/ndshuge-game/games/ghostslash/) |
+| 光核围城 LUMEN SIEGE | 像素生存 | [Play](https://ndshuge.github.io/ndshuge-game/games/lumen-siege/) |
+| 钟楼契约 BELL & BOND | 像素 · 昼夜循环 | [Play](https://ndshuge.github.io/ndshuge-game/games/belfry/) |
 
-## 怎么添加新游戏
+以上链接使用当前仓库的 Pages 目录结构；如遇无法运行，请在 Issue 中反馈浏览器与复现步骤。
 
-1. 把游戏做成静态可玩形态（浏览器直接能跑的 HTML/JS，资源走相对路径），放进 `games/<游戏名>/`，入口必须是 `index.html`
-2. 顺手把新游戏加进根目录 `index.html` 的卡片列表里
-3. 维护者本机运行仓库根目录的 `推送更新.bat`（本地维护脚本，含令牌读取逻辑，不入库）
-4. 等 1~2 分钟 Pages 部署完成，打开 https://ndshuge.github.io/ndshuge-game/games/<游戏名>/ 验证
+## 本地运行
 
-## 约定
+```bash
+git clone https://github.com/ndshuge/ndshuge-game.git
+cd ndshuge-game
+python -m http.server 8000
+```
 
-- 游戏必须是纯前端静态文件，不能依赖服务器
-- 资源路径用相对路径（`./xxx.js`），不要用绝对路径（`/xxx.js`），否则子目录下打不开
-- 单个游戏目录别超过 100MB（Pages 仓库软限制 1GB）
-- 大厅卡片带点赞（Abacus 免费计数 API，namespace `ndshuge-game`，key=游戏 slug；同一浏览器 localStorage 防重复）
+浏览器访问 `http://localhost:8000/`。少数游戏可直接双击打开，建议使用 HTTP 服务避免浏览器限制本地资源。
+
+## 自动化验收
+
+`games/lumen-siege/` 已有结构与无头测试，运行：
+
+```bash
+node games/lumen-siege/tests/run-all.mjs
+```
+
+相应的 GitHub Actions 工作流在游戏源码变化时执行该命令。无头测试不替代浏览器实机验收，其他游戏仍需逐个补充测试。
+
+## 贡献与维护
+
+1. 新游戏放在 `games/<slug>/`，入口为 `index.html`，静态资源使用相对路径。
+2. 同步更新大厅项目列表与此 README。
+3. 不提交个人 Token、私有资料或硬编码凭据；建议通过 GitHub CLI 或系统凭据管理器推送。
+4. 引入第三方音乐、图片、字体、模型时核对授权。整体开源许可证尚待确认，公开源码不等于自动准许商业再利用。
+
+[报告问题](https://github.com/ndshuge/ndshuge-game/issues) · [作者主页](https://github.com/ndshuge)
+
+## 安全与素材审查
+
+[游戏素材来源与版权清单](docs/ASSET_PROVENANCE.md)
