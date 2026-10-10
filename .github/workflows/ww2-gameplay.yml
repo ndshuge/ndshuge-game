@@ -1,0 +1,27 @@
+name: WW2 Frontline gameplay regression
+
+on:
+  push:
+    paths:
+      - 'games/ww2-frontline/**'
+      - '.github/workflows/ww2-gameplay.yml'
+  pull_request:
+    paths:
+      - 'games/ww2-frontline/**'
+      - '.github/workflows/ww2-gameplay.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gameplay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate collision, input, and rendering policy
+        run: node games/ww2-frontline/tests/gameplay.test.cjs
