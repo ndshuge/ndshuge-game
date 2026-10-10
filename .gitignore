@@ -42,3 +42,22 @@ uv-cache/
 *.pem
 *.key
 *token*.txt
+
+# Additional local-only artifacts (2026-10)
+# Example environment templates can be reviewed and committed.
+!.env.example
+!.env.sample
+!.env.template
+.cache/
+coverage/
+.nyc_output/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.swp
+*.swo
+*.sqlite
+*.sqlite3
+*.db
+*.p12
+*.pfx
