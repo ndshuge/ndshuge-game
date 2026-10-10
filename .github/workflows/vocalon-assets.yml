@@ -1,0 +1,27 @@
+name: VOCALON audio asset integrity
+
+on:
+  push:
+    paths:
+      - 'games/vocalon-chaos/**'
+      - '.github/workflows/vocalon-assets.yml'
+  pull_request:
+    paths:
+      - 'games/vocalon-chaos/**'
+      - '.github/workflows/vocalon-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify original audio bytes and lazy-loader integrity
+        run: node games/vocalon-chaos/tests/audio-assets.test.cjs
