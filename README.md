@@ -8,6 +8,19 @@
 
 *截图展示游戏厅中的《光核围城》，并非游戏厅大厅首页。*
 
+## 第一次来玩什么？
+
+| 想体验的风格 | 先试试 |
+| --- | --- |
+| **3D 战场** | [西线前线](https://ndshuge.github.io/ndshuge-game/games/ww2-frontline/)：浏览器中的二战 FPS 原型 |
+| **物理实验** | [重力花园](https://ndshuge.github.io/ndshuge-game/games/gravity-garden/)：点击生成刚体、改变重力 |
+| **像素动作** | [LUMEN SIEGE](https://ndshuge.github.io/ndshuge-game/games/lumen-siege/)：怪物、升级与生存挑战 |
+| **音游节奏** | [VOCALON!](https://ndshuge.github.io/ndshuge-game/games/vocalon-chaos/)：节拍与即时反馈 |
+
+**[打开全部游戏 →](https://ndshuge.github.io/ndshuge-game/)**
+
+<sub>部分 3D 和音频实验对设备、浏览器、硬件加速及首次互动有要求。入口可访问不等于已经完成所有设备的性能与操作验收。</sub>
+
 ## 15 款游戏
 
 | 游戏 | 风格 | 在线试玩 |
