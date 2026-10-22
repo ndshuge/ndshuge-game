@@ -42,6 +42,64 @@ body.warping #brand,body.warping #sysbar,body.warping #hint{opacity:0}
 #boot{position:fixed;inset:0;z-index:50;background:#02030c;pointer-events:none;
   animation:bootin 1.2s ease-in .45s forwards}
 @keyframes bootin{to{opacity:0}}
+
+/* Game Library: a flat, accessible catalogue; no additional orbiting planet. */
+#library-open{border-color:rgba(255,213,79,.55);color:#ffe78c;background:rgba(35,28,10,.76);white-space:nowrap;cursor:pointer;font:inherit;display:inline-flex;gap:8px;align-items:center}
+#library-open:hover,#library-open:focus-visible{background:rgba(91,72,22,.72);outline:1px solid #ffe78c}
+#library-open span{border-radius:2px;background:rgba(255,213,79,.18);padding:1px 5px;color:#fff}
+body.library-open #hint{opacity:0}
+#library-layer[hidden]{display:none!important}
+#library-layer{position:fixed;inset:0;z-index:30;background:radial-gradient(ellipse at 86% 0,rgba(0,229,255,.12),transparent 48%),radial-gradient(ellipse at 6% 85%,rgba(159,103,255,.14),transparent 50%),#060b18;color:#edfaff;font-family:system-ui,"Microsoft YaHei",sans-serif;user-select:auto;overflow:hidden;isolation:isolate}
+#library-layer:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(117,188,216,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(117,188,216,.055) 1px,transparent 1px);background-size:42px 42px}
+.library-shell{position:relative;max-width:1460px;height:100%;margin:auto;padding:clamp(15px,2.6vw,36px) clamp(16px,3vw,48px) 0;display:flex;flex-direction:column;min-width:0}
+.library-top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-bottom:18px;border-bottom:1px solid rgba(140,211,239,.22)}
+.library-brand{font:700 12px monospace;letter-spacing:.22em;color:#6cece6}
+.library-close{background:#111e32;border:1px solid rgba(134,198,221,.35);color:#e8ffff;padding:11px 16px;border-radius:8px;font:600 13px system-ui;cursor:pointer;transition:.18s}
+.library-close:hover,.library-close:focus-visible{border-color:#52ecdf;background:#1a3443}
+.library-heading{padding:clamp(20px,3vw,38px) 0 19px}
+.library-kicker{font:700 12px monospace;letter-spacing:.24em;color:#72eee5;margin-bottom:8px}
+.library-heading h1{font-size:clamp(29px,4.8vw,66px);font-weight:900;line-height:1.1;letter-spacing:-.045em;color:white;margin:0}
+.library-heading h1 span{color:#ffdf74}
+.library-heading p{margin-top:10px;color:#a8bed0;font-size:13px;line-height:1.7;max-width:760px}
+.library-toolbar{display:flex;align-items:center;justify-content:space-between;gap:13px;flex-wrap:wrap;margin-bottom:16px}
+.library-search-wrap{flex:1 1 290px;max-width:550px;display:flex;align-items:center;gap:10px;border:1px solid rgba(126,184,225,.37);border-radius:10px;background:rgba(10,22,38,.86);padding:0 14px}
+.library-search-wrap:focus-within{border-color:#4df6d5;box-shadow:0 0 0 2px rgba(65,241,212,.1)}
+.library-search-wrap label{font-size:20px;color:#65efdc}
+#library-search{width:100%;min-width:0;height:46px;color:#fff;outline:0;background:none;border:0;font:400 14px system-ui}
+#library-search::placeholder{color:#7b92a7}
+#library-sort{font:500 13px system-ui;border-radius:8px;background:#111e32;border:1px solid rgba(126,184,225,.35);color:#eafaff;padding:11px;min-height:46px;cursor:pointer}
+.library-filters{display:flex;gap:8px;overflow-x:auto;scrollbar-width:thin;padding:1px 0 14px;flex-shrink:0}
+.library-filter{border:1px solid rgba(115,176,212,.25);border-radius:999px;padding:8px 14px;color:#a8bfcf;background:rgba(20,34,54,.68);white-space:nowrap;font:600 12px system-ui;cursor:pointer}
+.library-filter:hover,.library-filter:focus-visible{color:#fff;border-color:#6de8e4}
+.library-filter[aria-pressed="true"]{background:#b3fff0;color:#082421;border-color:#b3fff0}
+.library-results{padding:1px 0 12px;color:#819fb3;font:500 12px monospace;letter-spacing:.07em}
+.library-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:0 5px 38px 1px;scrollbar-color:#3f647b transparent;scrollbar-width:thin}
+.library-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(13px,1.8vw,24px)}
+.library-card{min-width:0;border:1px solid rgba(112,167,201,.25);background:linear-gradient(155deg,rgba(28,45,65,.78),rgba(11,20,37,.91));border-radius:13px;overflow:hidden;transition:transform .2s,border-color .2s,box-shadow .2s;display:flex;flex-direction:column}
+.library-card:hover,.library-card:focus-within{transform:translateY(-4px);border-color:rgba(99,240,228,.62);box-shadow:0 14px 48px rgba(0,0,0,.36)}
+.library-cover{position:relative;height:clamp(140px,14vw,190px);overflow:hidden;padding:16px;background:radial-gradient(ellipse at 68% 54%,var(--gc),transparent 56%),radial-gradient(ellipse at 5% 95%,var(--gg),transparent 67%),#07101e}
+.library-cover:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(0,0,0,.1) 5px 6px);pointer-events:none}
+.library-cover:before{content:"";position:absolute;width:146px;height:146px;right:2%;top:8%;border:1px solid var(--gg);border-radius:24%;transform:rotate(26deg);box-shadow:0 0 35px var(--gc),inset 0 0 35px rgba(255,255,255,.06);opacity:.67}
+.library-symbol{position:absolute;right:16%;top:28%;font:200 80px/1 sans-serif;color:var(--gg);opacity:.85;text-shadow:0 0 30px var(--gc);transform:rotate(-15deg)}
+.library-cover-title{position:absolute;left:16px;bottom:16px;right:12px;font:800 clamp(19px,2vw,26px)/1.05 system-ui;letter-spacing:.03em;color:#fff;text-shadow:0 3px 12px #081122;overflow-wrap:anywhere;z-index:1}
+.library-number{position:absolute;left:16px;top:14px;color:rgba(255,255,255,.7);font:700 10px monospace;letter-spacing:.14em;z-index:1}
+.library-new{position:absolute;right:12px;top:12px;background:#d9fff3;color:#002a24;font:bold 10px monospace;letter-spacing:.1em;padding:5px 8px;border-radius:4px;z-index:1}
+.library-body{padding:16px;display:flex;flex-direction:column;gap:9px;flex:1}
+.library-type{font:700 11px monospace;letter-spacing:.09em;color:#7beedf}
+.library-game-name{font:750 17px/1.3 system-ui;color:#f8faff;letter-spacing:-.01em}
+.library-desc{font:400 12px/1.7 system-ui;color:#9db2c9;min-height:62px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.library-card-foot{margin-top:auto;padding-top:9px;display:flex;gap:9px;align-items:center}
+.library-play{flex:1;padding:11px 12px;border-radius:7px;border:1px solid rgba(116,248,222,.55);background:rgba(40,133,126,.18);color:#b3fff0;text-decoration:none;text-align:center;font:700 12px system-ui;transition:.15s}
+.library-play:hover,.library-play:focus-visible{background:#6afadf;color:#032925}
+.library-fav{min-width:40px;min-height:40px;border-radius:7px;border:1px solid rgba(130,179,203,.35);background:#142638;color:#819ab1;font-size:21px;cursor:pointer}
+.library-fav[aria-pressed="true"]{color:#ffdb70;border-color:#ffdb70}
+.library-empty{grid-column:1/-1;border:1px dashed #385a70;border-radius:14px;padding:60px 16px;text-align:center;color:#9bb4c9;font-size:14px}
+.library-bottom{padding:12px 0;color:#7895ac;text-align:center;font:11px monospace;border-top:1px solid rgba(130,182,203,.14);flex-shrink:0}
+@media(max-width:1100px){.library-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.library-heading{padding:20px 0 14px}.library-cover{height:148px}.library-symbol{font-size:65px}}
+@media(max-width:510px){#sysbar{top:10px;right:9px;gap:5px}.gh{font-size:10px;padding:6px 8px}#brand{font-size:10px;top:45px;left:10px}.library-grid{grid-template-columns:minmax(0,1fr)}.library-cover{height:165px}.library-symbol{font-size:82px}.library-heading h1{font-size:37px}.library-top{padding-bottom:12px}.library-search-wrap{flex-basis:100%;max-width:none}.library-toolbar{gap:8px}.library-card{flex-direction:row;min-height:160px}.library-cover{flex:0 0 40%;height:auto;min-height:160px}.library-cover:before{width:95px;height:95px;top:14%}.library-symbol{font-size:50px;right:18%;top:29%}.library-cover-title{font-size:16px}.library-body{padding:12px;gap:6px}.library-desc{min-height:0;-webkit-line-clamp:2;font-size:11px}.library-type{font-size:10px}.library-game-name{font-size:14px}.library-card-foot{padding-top:3px}.library-play{padding:9px 5px}.library-fav{min-width:33px;min-height:33px}.library-results{font-size:10px}}
+@media(prefers-reduced-motion:reduce){.library-card,.library-close,.library-play{transition:none}}
+
 </style>
 </head>
 <body>
@@ -49,10 +107,33 @@ body.warping #brand,body.warping #sysbar,body.warping #hint{opacity:0}
 <canvas id="space" width="480" height="270"></canvas>
 <div id="crt"></div>
 <div id="brand">◆ NDSHUGE <b>鼠哥游戏厅</b> · ARCADE</div>
-<div id="sysbar"><a class="gh" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB</a></div>
+<div id="sysbar"><button type="button" class="gh" id="library-open" aria-controls="library-layer" aria-expanded="false">▦ 游戏库 <span>16</span></button><a class="gh" href="https://github.com/ndshuge/ndshuge-game" target="_blank" rel="noopener">GITHUB</a></div>
 <div id="hint">点行星降落 → 兔子介绍 · ← → 或滑动浏览 · NDSHUGE © 2026</div>
 <!-- 选中的游戏信息 / 进入按钮 / 点赞全部画进 canvas，底部不再叠 DOM 面板 -->
 <div id="rotate">↻ 手机横屏体验更佳</div>
+
+<section id="library-layer" role="dialog" aria-label="全部游戏库" aria-modal="true" hidden>
+  <div class="library-shell">
+    <header class="library-top">
+      <div class="library-brand">◆ NDSHUGE ARCADE / GAME LIBRARY</div>
+      <button class="library-close" id="library-close" type="button">← 返回星系视图</button>
+    </header>
+    <div class="library-heading">
+      <div class="library-kicker">COLLECTION / ALL PLAYABLE WORLDS</div>
+      <h1>鼠哥<span>游戏库</span></h1>
+      <p>不必寻找行星，所有游戏在这里一览无余。搜索、分类、收藏，找到喜欢的作品即可进入试玩。</p>
+    </div>
+    <div class="library-toolbar">
+      <div class="library-search-wrap"><label for="library-search">⌕</label><input id="library-search" type="search" placeholder="搜索名称 / 玩法 / 关键词…" autocomplete="off" spellcheck="false"></div>
+      <select id="library-sort" aria-label="排序方式"><option value="default">推荐排序</option><option value="name">名称排序</option><option value="number">创作编号</option></select>
+    </div>
+    <nav id="library-filters" class="library-filters" aria-label="游戏分类"></nav>
+    <div id="library-results" class="library-results" role="status" aria-live="polite"></div>
+    <div class="library-scroll" id="library-scroll"><div class="library-grid" id="library-grid"></div></div>
+    <footer class="library-bottom">NDSHUGE ARCADE · 浏览、收藏、随时出发 / ESC 返回</footer>
+  </div>
+</section>
+
 <script>
 'use strict';
 window.addEventListener('error',function(ev){
@@ -828,6 +909,7 @@ cv.addEventListener('pointerup',function(e){
   if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)&&!intro.active&&!flash.active)cycle(dx<0?1:-1);
 });
 addEventListener('keydown',function(e){
+  if(document.body.classList.contains('library-open'))return;
   audio();
   if(intro.active){
     if(e.key==='Enter'||e.key===' ')go();                 /* 面板=进入，其他=跳过 */
@@ -1148,5 +1230,105 @@ function frame(now){
   update(dt,now/1000);render(now/1000);requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 </script>
+
+<script>
+/* Flat collection, deliberately kept separate from GAMES / planets.
+   Add future non-planet games here. The original GAMES array stays unchanged. */
+(function(){
+  'use strict';
+  var layer=document.getElementById('library-layer');
+  var opener=document.getElementById('library-open');
+  var closer=document.getElementById('library-close');
+  var grid=document.getElementById('library-grid');
+  var filters=document.getElementById('library-filters');
+  var search=document.getElementById('library-search');
+  var sort=document.getElementById('library-sort');
+  var results=document.getElementById('library-results');
+  var scroll=document.getElementById('library-scroll');
+  var kinds=['全部','动作','节奏','策略','休闲','实验','收藏'];
+  var tagsByKey={
+    'ww2-frontline':['动作','策略'],'still':['实验','动作'],
+    'gravity-garden':['休闲','实验'],'motu':['休闲','实验'],
+    'echo-trail':['休闲'],'beat-paddle':['节奏','休闲'],
+    'lightlag':['策略','实验'],'vocalon-chaos':['节奏'],
+    'pixel-pong':['休闲'],'rewinder':['实验','动作'],
+    'shise':['动作'],'issen':['动作'],'ghostslash':['动作'],
+    'lumen-siege':['动作','策略'],'belfry':['策略','休闲'],
+    'pulse-breaker':['动作','节奏']
+  };
+  var symbols=['◇','◈','✧','▱','✣','◎','◌','✦','◆','◁','▰','⟡','⌁','✺','✴'];
+  var libraryOnly=[{
+    no:'No.16',key:'pulse-breaker',t:'脉冲破界 PULSE // BREAKER',
+    short:'脉冲破界',tag:'节拍 · 动作 · Roguelite',
+    d:'卡住节拍连续斩击，精准格挡反击；五波战斗、强化构筑和终局 Boss。',
+    href:'./games/pulse-breaker/',c:'#185c69',g:'#77ffdf',featured:true
+  }];
+  var all=libraryOnly.concat(GAMES.map(function(g){return g;}));
+  var active='全部';
+  var favs={};try{favs=JSON.parse(localStorage.getItem('ndshuge-library-favs')||'{}')||{}}catch(e){favs={}}
+  function escapeHTML(s){return String(s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+  function open(){
+    layer.hidden=false;document.body.classList.add('library-open');
+    opener.setAttribute('aria-expanded','true');render();search.focus({preventScroll:true});
+  }
+  function close(){
+    layer.hidden=true;document.body.classList.remove('library-open');
+    opener.setAttribute('aria-expanded','false');opener.focus({preventScroll:true});
+  }
+  opener.addEventListener('click',open);closer.addEventListener('click',close);
+  layer.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();close()}e.stopPropagation()});
+  search.addEventListener('input',function(){render();scroll.scrollTop=0});
+  sort.addEventListener('change',render);
+  kinds.forEach(function(cat){
+    var btn=document.createElement('button');btn.type='button';btn.className='library-filter';
+    btn.textContent=cat;btn.dataset.kind=cat;btn.setAttribute('aria-pressed',String(cat===active));
+    btn.addEventListener('click',function(){
+      active=cat;Array.prototype.forEach.call(filters.children,function(b){b.setAttribute('aria-pressed',String(b.dataset.kind===active))});
+      scroll.scrollTop=0;render();
+    });filters.appendChild(btn);
+  });
+  function render(){
+    var q=search.value.trim().toLocaleLowerCase();
+    var items=all.filter(function(g){
+      if(active==='收藏'&&!favs[g.key])return false;
+      if(active!=='全部'&&active!=='收藏'&&!(tagsByKey[g.key]||[]).includes(active))return false;
+      return !q||[g.t,g.short,g.tag,g.d,g.key].join(' ').toLocaleLowerCase().includes(q);
+    });
+    if(sort.value==='name')items.sort(function(a,b){return a.t.localeCompare(b.t,'zh-CN')});
+    if(sort.value==='number')items.sort(function(a,b){return Number(a.no.replace(/\D/g,''))-Number(b.no.replace(/\D/g,''))});
+    results.textContent='收录 '+all.length+' 款  /  当前显示 '+items.length+' 款';
+    if(!items.length){grid.innerHTML='<div class="library-empty">没有找到匹配的游戏。换个关键词或分类再试试。</div>';return;}
+    grid.innerHTML=items.map(function(g){
+      var i=Math.max(0,GAMES.findIndex(function(v){return v.key===g.key}));
+      var symbol=g.featured?'✦':symbols[i%symbols.length];
+      var name=escapeHTML(g.short||g.t),full=escapeHTML(g.t),desc=escapeHTML(g.d);
+      var key=escapeHTML(g.key),tag=escapeHTML(g.tag),href=escapeHTML(g.href);
+      return '<article class="library-card" data-game="'+key+'">'+
+        '<div class="library-cover" style="--gc:'+g.c+';--gg:'+g.g+'">'+
+          '<span class="library-number">'+escapeHTML(g.no)+'</span>'+
+          (g.featured?'<span class="library-new">NEW / V2.2</span>':'')+
+          '<span class="library-symbol" aria-hidden="true">'+symbol+'</span>'+
+          '<div class="library-cover-title">'+name+'</div>'+
+        '</div><div class="library-body">'+
+          '<div class="library-type">'+tag+(g.dev?' · 实验中':'')+'</div>'+
+          '<h2 class="library-game-name">'+full+'</h2>'+
+          '<p class="library-desc">'+desc+'</p>'+
+          '<div class="library-card-foot">'+
+            '<button class="library-fav" type="button" data-fav="'+key+'" aria-label="'+(favs[g.key]?'取消收藏 ':'收藏 ')+full+'" aria-pressed="'+String(!!favs[g.key])+'">'+(favs[g.key]?'★':'☆')+'</button>'+
+            '<a class="library-play" href="'+href+'" aria-label="启动 '+full+'">开始游戏 ↗</a>'+
+          '</div></div></article>';
+    }).join('');
+  }
+  grid.addEventListener('click',function(e){
+    var b=e.target.closest('[data-fav]');if(!b)return;
+    var k=b.dataset.fav;if(favs[k])delete favs[k];else favs[k]=true;
+    try{localStorage.setItem('ndshuge-library-favs',JSON.stringify(favs))}catch(e){}
+    render();
+  });
+  window.addEventListener('pageshow',function(){if(!layer.hidden)render()});
+  if(new URLSearchParams(location.search).get('view')==='library')open();
+})();
+</script>
+
 </body>
 </html>
