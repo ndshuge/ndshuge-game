@@ -1,8 +1,8 @@
 # 鼠哥游戏厅 · SHUGE GAMES
 
-> 15 款浏览器小游戏：物理沙盒、像素动作、弹幕、生存挑战与音乐节奏，打开即玩。
+> 16 款浏览器小游戏：物理沙盒、像素动作、弹幕、生存挑战与音乐节奏，打开即玩。游戏厅保留原有行星导航，也支持卡片式游戏库浏览。
 
-**[进入游戏大厅 →](https://ndshuge.github.io/ndshuge-game/)** · [其他作品](https://ndshuge.github.io/ndshuge-galaxy/)
+**[进入游戏大厅 →](https://ndshuge.github.io/ndshuge-game/)** · **[打开游戏库 →](https://ndshuge.github.io/ndshuge-game/?view=library)** · [其他作品](https://ndshuge.github.io/ndshuge-galaxy/)
 
 ![LUMEN SIEGE 光核围城真实网页截图](docs/screenshots/lumen.png)
 
@@ -17,11 +17,11 @@
 | **像素动作** | [LUMEN SIEGE](https://ndshuge.github.io/ndshuge-game/games/lumen-siege/)：怪物、升级与生存挑战 |
 | **音游节奏** | [VOCALON!](https://ndshuge.github.io/ndshuge-game/games/vocalon-chaos/)：节拍与即时反馈 |
 
-**[打开全部游戏 →](https://ndshuge.github.io/ndshuge-game/)**
+**[打开全部游戏库 →](https://ndshuge.github.io/ndshuge-game/?view=library)**
 
 <sub>部分 3D 和音频实验对设备、浏览器、硬件加速及首次互动有要求。入口可访问不等于已经完成所有设备的性能与操作验收。</sub>
 
-## 15 款游戏
+## 16 款游戏
 
 | 游戏 | 风格 | 在线试玩 |
 | --- | --- | --- |
@@ -40,6 +40,7 @@
 | 残光斩 GHOSTSLASH | 高速动作 | [Play](https://ndshuge.github.io/ndshuge-game/games/ghostslash/) |
 | 光核围城 LUMEN SIEGE | 像素生存 | [Play](https://ndshuge.github.io/ndshuge-game/games/lumen-siege/) |
 | 钟楼契约 BELL & BOND | 像素 · 昼夜循环 | [Play](https://ndshuge.github.io/ndshuge-game/games/belfry/) |
+| 脉冲破界 PULSE // BREAKER | 节奏动作 · Roguelite | [Play](https://ndshuge.github.io/ndshuge-game/games/pulse-breaker/) |
 
 以上链接使用当前仓库的 Pages 目录结构；如遇无法运行，请在 Issue 中反馈浏览器与复现步骤。
 
@@ -72,7 +73,7 @@ node games/lumen-siege/tests/run-all.mjs
 ## 贡献与维护
 
 1. 新游戏放在 `games/<slug>/`，入口为 `index.html`，静态资源使用相对路径。
-2. 同步更新大厅项目列表与此 README。
+2. 未来新游戏默认添加至大厅 `index.html` 的 `libraryOnly` 游戏库清单和此 README；无需在星球地图 `GAMES` 数组里新建星球。仅当明确需要新星球时才修改 `GAMES`。
 3. 不提交个人 Token、私有资料或硬编码凭据；建议通过 GitHub CLI 或系统凭据管理器推送。
 4. 引入第三方音乐、图片、字体、模型时核对授权。整体开源许可证尚待确认，公开源码不等于自动准许商业再利用。
 
