@@ -222,7 +222,7 @@
         el.btnDifficulty.addEventListener('click', function () {
           var game = PG.game;
           if (!game || game.state !== 'playing' || !game.setSpawnMultiplier) return;
-          var levels = [1, 2, 5, 10];
+          var levels = [1, 2, 5, 10, 50, 100];
           var current = game.spawnMultiplier || 1;
           var index = levels.indexOf(current);
           var next = levels[(index + 1) % levels.length];
@@ -283,9 +283,9 @@
     syncDifficultyButton: function (game) {
       if (!el.btnDifficulty) return;
       var multiplier = game && game.spawnMultiplier || 1;
-      var labels = { 1: '标准 ×1', 2: '困难 ×2', 5: '极限 ×5', 10: '地狱 ×10' };
+      var labels = { 1: '标准 ×1', 2: '困难 ×2', 5: '极限 ×5', 10: '地狱 ×10', 50: '狂潮 ×50', 100: '末日 ×100' };
       el.btnDifficulty.textContent = labels[multiplier] || labels[1];
-      el.btnDifficulty.title = '点击切换刷怪量：标准 ×1 → 困难 ×2 → 极限 ×5 → 地狱 ×10';
+      el.btnDifficulty.title = '点击切换刷怪量：标准 ×1 → 困难 ×2 → 极限 ×5 → 地狱 ×10 → 狂潮 ×50 → 末日 ×100';
       el.btnDifficulty.setAttribute('aria-label', '当前模式：' + (labels[multiplier] || labels[1]) + '。点击切换刷怪倍率');
       el.btnDifficulty.classList.toggle('difficulty-hot', multiplier > 1);
     },

@@ -527,7 +527,7 @@ check('Luck unlocks a fourth offer and every extra-choice card remains clickable
 check('live challenge button cycles 1x/2x/5x/10x and scales spawn pressure', () => {
   game.newRun();
   const button = documentStub.getElementById('btn-difficulty');
-  const expected = [2, 5, 10, 1];
+  const expected = [2, 5, 10, 50, 100, 1];
   for (const multiplier of expected) {
     button.click();
     assert(game.spawnMultiplier === multiplier,
@@ -536,7 +536,7 @@ check('live challenge button cycles 1x/2x/5x/10x and scales spawn pressure', () 
 
   const originalFindSpawnPoint = game.findSpawnPoint;
   const counts = [];
-  for (const multiplier of [1, 2, 5, 10]) {
+  for (const multiplier of [1, 2, 5, 10, 50, 100]) {
     game.newRun();
     game.setSpawnMultiplier(multiplier);
     game.enemies.length = 0;
@@ -551,7 +551,7 @@ check('live challenge button cycles 1x/2x/5x/10x and scales spawn pressure', () 
   }
   game.findSpawnPoint = originalFindSpawnPoint;
   game.newRun();
-  return `button cycles 2x/5x/10x/1x; tier-1 spawn batches ${counts.join('/')}`;
+  return `button cycles 2x/5x/10x/50x/100x/1x; tier-1 spawn batches ${counts.join('/')}`;
 });
 
 check('10x challenge sustains a dense horde without quadratic separation cost', () => {
@@ -596,6 +596,16 @@ check('10x challenge sustains a dense horde without quadratic separation cost', 
   game.findSpawnPoint = originalFindSpawnPoint;
   game.newRun();
   return `10x reached ${aliveCount} alive; separation ${elapsed}ms; 720-enemy simulation ${fullElapsed}ms`;
+});
+
+check('saturated pickup pool preserves XP from every kill', () => {
+  const gems = new PG.Gems();
+  for (let i = 0; i < 900; i++) gems.spawn(200 + i % 20, 200 + Math.floor(i / 20), 3);
+  const active = gems.items.filter((g) => g.active);
+  const earned = active.reduce((sum, g) => sum + g.value, 0);
+  assert(earned === 2700, `pool silently lost XP: ${earned}/2700`);
+  assert(active.length === 400, `pool unexpectedly has ${active.length} active items`);
+  return `${active.length} visible pickups retain ${earned} XP from 900 kills`;
 });
 
 check('every upgrade belongs to exactly one pool', () => {
