@@ -9,6 +9,7 @@
   var handlers = {};
   var offers = [];
   var cardNodes = [];
+  var pickPending = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -192,6 +193,7 @@
       el.comboN = $('hud-combo-n');
       el.btnMute = $('btn-mute');
       el.btnPause = $('btn-pause');
+      el.btnDifficulty = $('btn-difficulty');
 
       el.start = $('screen-start');
       el.upgrade = $('screen-upgrade');
@@ -216,6 +218,19 @@
       $('btn-resume').addEventListener('click', function () { PG.Audio.play('click'); handlers.onResume && handlers.onResume(); });
       $('btn-quit').addEventListener('click', function () { PG.Audio.play('click'); handlers.onQuit && handlers.onQuit(); });
       el.btnPause.addEventListener('click', function () { handlers.onPause && handlers.onPause(); });
+      if (el.btnDifficulty) {
+        el.btnDifficulty.addEventListener('click', function () {
+          var game = PG.game;
+          if (!game || game.state !== 'playing' || !game.setSpawnMultiplier) return;
+          var levels = [1, 2, 5, 10];
+          var current = game.spawnMultiplier || 1;
+          var index = levels.indexOf(current);
+          var next = levels[(index + 1) % levels.length];
+          game.setSpawnMultiplier(next);
+          PG.Audio.play('click');
+          UI.syncDifficultyButton(game);
+        });
+      }
 
       /* On-screen dash. Touch-only: it appears the first time a real touch is seen,
          so a desktop player never gets a button they cannot use. */
@@ -249,6 +264,7 @@
       }, false);
 
       UI.syncMuteButton();
+      UI.syncDifficultyButton(PG.game);
     },
 
     toggleMute: function () {
@@ -264,6 +280,16 @@
       el.btnMuteStart.textContent = muted ? 'SOUND: OFF' : 'SOUND: ON';
     },
 
+    syncDifficultyButton: function (game) {
+      if (!el.btnDifficulty) return;
+      var multiplier = game && game.spawnMultiplier || 1;
+      var labels = { 1: '标准 ×1', 2: '困难 ×2', 5: '极限 ×5', 10: '地狱 ×10' };
+      el.btnDifficulty.textContent = labels[multiplier] || labels[1];
+      el.btnDifficulty.title = '点击切换刷怪量：标准 ×1 → 困难 ×2 → 极限 ×5 → 地狱 ×10';
+      el.btnDifficulty.setAttribute('aria-label', '当前模式：' + (labels[multiplier] || labels[1]) + '。点击切换刷怪倍率');
+      el.btnDifficulty.classList.toggle('difficulty-hot', multiplier > 1);
+    },
+
     /* ---------- screens ---------- */
 
     showScreen: function (name) {
@@ -273,6 +299,11 @@
       else if (name === 'pause') show(el.pause);
       else if (name === 'dead') show(el.dead);
       else if (name === 'intro') show(el.intro);
+      if (name !== 'upgrade') {
+        offers = [];
+        cardNodes = [];
+        pickPending = false;
+      }
     },
 
     showHud: function (visible) {
@@ -332,6 +363,8 @@
       }
 
       /* kill streak: only shown while it is alive */
+      UI.syncDifficultyButton(game);
+
       var combo = PG.Audio.combo();
       if (combo !== last.combo) {
         last.combo = combo;
@@ -363,8 +396,10 @@
 
     renderUpgrades: function (list) {
       offers = list || [];
+      pickPending = false;
       cardNodes = [];
       el.cards.innerHTML = '';
+      if (el.upgrade) el.upgrade.scrollTop = 0;
       if (el.phase) el.phase.textContent = '选择一项强化';
       for (var i = 0; i < offers.length; i++) {
         var card = buildCard(offers[i], i);
@@ -374,13 +409,16 @@
     },
 
     pick: function (index) {
-      if (!offers[index]) return;
+      if (pickPending || !offers[index]) return;
       var chosen = offers[index];
-      offers = [];
+      pickPending = true;
       if (cardNodes[index]) cardNodes[index].classList.add('chosen');
       PG.Audio.play('pick');
-      /* let the choice render one frame before the screen closes */
+      /* Keep the selection locked through the brief visual confirmation. Clearing
+         the offer list just before the callback prevents stale cards/number keys
+         from racing the next queued level-up (including the extra Luck choice). */
       window.setTimeout(function () {
+        offers = [];
         handlers.onPick && handlers.onPick(chosen);
       }, 120);
     }
@@ -394,6 +432,7 @@
     var card = document.createElement('div');
     card.className = 'card r-' + rarity;
     card.tabIndex = 0;
+    card.setAttribute('role', 'button');
 
     var g = document.createElement('div');
     g.className = 'glyph';
@@ -435,6 +474,7 @@
     /* a description may depend on what the player already owns: the chain
        upgrade has to report its real current percentage */
     desc.textContent = typeof u.desc === 'function' ? u.desc(player, u) : u.desc;
+    card.setAttribute('aria-label', u.name + ': ' + desc.textContent);
 
     var rarityEl = document.createElement('div');
     rarityEl.className = 'rarity';
@@ -460,6 +500,14 @@
     card.appendChild(slot);
     card.addEventListener('click', (function (idx) {
       return function () { UI.pick(idx); };
+    })(index));
+    card.addEventListener('keydown', (function (idx) {
+      return function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          UI.pick(idx);
+        }
+      };
     })(index));
     return card;
   }

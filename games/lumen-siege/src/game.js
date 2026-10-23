@@ -21,6 +21,7 @@
     this.kills = 0;
     this.tier = 1;
     this.spawnTimer = 0;
+    this.spawnMultiplier = 1;       /* 1x / 2x / 5x / 10x live spawn pressure */
     this.pendingLevelUps = 0;
     this.currentOffers = [];
     this.upgradePhase = 'offense';
@@ -74,6 +75,7 @@
     this.time = 0;
     this.kills = 0;
     this.tier = 1;
+    this.spawnMultiplier = 1;
     this.spawnTimer = 0.35;
     this.pendingLevelUps = 0;
     this.currentOffers = [];
@@ -148,9 +150,22 @@
 
   /* ---------- difficulty ---------- */
 
+  Game.prototype.setSpawnMultiplier = function (multiplier) {
+    var allowed = [1, 2, 5, 10];
+    this.spawnMultiplier = allowed.indexOf(multiplier) >= 0 ? multiplier : 1;
+    /* Apply a new challenge setting promptly, without interrupting the current run. */
+    if (this.state === 'playing' && this.spawnMultiplier > 1) {
+      this.spawnTimer = Math.min(this.spawnTimer, 0.12);
+    }
+    return this.spawnMultiplier;
+  };
+
   Game.prototype.tierFor = function () { return Math.min(12, 1 + Math.floor(this.time / 24)); };
   Game.prototype.spawnIntervalFor = function (tier) { return Math.max(0.30, 1.15 - (tier - 1) * 0.09); };
   Game.prototype.maxAliveFor = function (tier) { return Math.min(72, 20 + (tier - 1) * 6); };
+  Game.prototype.spawnCapFor = function (tier) {
+    return this.maxAliveFor(tier) * (this.spawnMultiplier || 1);
+  };
   Game.prototype.hpMultFor = function (tier) {
     /* Steeper after the mid game. The late-game complaint was that everything melted:
        a flat slope meant a fully built player deleted each wave on contact. */
@@ -834,8 +849,11 @@
     if (this.spawnTimer <= 0) {
       this.spawnTimer = this.spawnIntervalFor(this.tier);
       var alive = this.enemies.length;
-      var cap = this.maxAliveFor(this.tier);
-      var batch = 1 + (this.tier > 3 ? PG.randInt(0, 1) : 0);
+      var multiplier = this.spawnMultiplier || 1;
+      /* Scale both arrivals and the live-enemy budget, so higher modes remain
+         meaningfully denser instead of hitting the normal cap and going quiet. */
+      var cap = this.spawnCapFor(this.tier);
+      var batch = (1 + (this.tier > 3 ? PG.randInt(0, 1) : 0)) * multiplier;
       for (var b = 0; b < batch && alive + b < cap; b++) {
         var kind = this.pickType(this.tier);
         var isElite = PG.rng.next() < this.eliteChanceFor(this.tier);
@@ -869,21 +887,66 @@
     var list = this.enemies;
     this._sepFrame = (this._sepFrame || 0) + 1;
     if (this._sepFrame % 2) return;
-    for (var i = 0; i < list.length; i++) {
-      var a = list[i];
-      if (a.dead || a.spawnT > 0) continue;
-      for (var j = i + 1; j < list.length; j++) {
-        var b = list[j];
-        if (b.dead || b.spawnT > 0) continue;
-        var dx = b.x - a.x, dy = b.y - a.y;
-        var min = a.r + b.r;
-        var d2 = dx * dx + dy * dy;
-        if (d2 >= min * min || d2 <= 0.0001) continue;
-        var d = Math.sqrt(d2);
-        var push = (min - d) * 0.5;
-        var ux = dx / d, uy = dy / d;
-        a.x -= ux * push; a.y -= uy * push;
-        b.x += ux * push; b.y += uy * push;
+
+    /* Normal runs stay on the tiny, simple pair loop. Challenge modes can hold
+       hundreds of enemies, so bucket them into 32px cells and only compare nearby
+       bodies; this avoids the quadratic full-screen scan at 5x/10x density. */
+    if (list.length <= 100) {
+      for (var i = 0; i < list.length; i++) {
+        var a = list[i];
+        if (a.dead || a.spawnT > 0) continue;
+        for (var j = i + 1; j < list.length; j++) {
+          var b = list[j];
+          if (b.dead || b.spawnT > 0) continue;
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var min = a.r + b.r;
+          var d2 = dx * dx + dy * dy;
+          if (d2 >= min * min || d2 <= 0.0001) continue;
+          var d = Math.sqrt(d2);
+          var push = (min - d) * 0.5;
+          var ux = dx / d, uy = dy / d;
+          a.x -= ux * push; a.y -= uy * push;
+          b.x += ux * push; b.y += uy * push;
+        }
+      }
+      return;
+    }
+
+    var cellSize = 32;
+    var buckets = Object.create(null);
+    function cellKey(x, y) { return Math.floor(x / cellSize) + ',' + Math.floor(y / cellSize); }
+    for (var n = 0; n < list.length; n++) {
+      var body = list[n];
+      if (body.dead || body.spawnT > 0) continue;
+      var key = cellKey(body.x, body.y);
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push(n);
+    }
+
+    for (var i2 = 0; i2 < list.length; i2++) {
+      var a2 = list[i2];
+      if (a2.dead || a2.spawnT > 0) continue;
+      var gx = Math.floor(a2.x / cellSize), gy = Math.floor(a2.y / cellSize);
+      for (var oy = -1; oy <= 1; oy++) {
+        for (var ox = -1; ox <= 1; ox++) {
+          var nearby = buckets[(gx + ox) + ',' + (gy + oy)];
+          if (!nearby) continue;
+          for (var k = 0; k < nearby.length; k++) {
+            var j2 = nearby[k];
+            if (j2 <= i2) continue;
+            var b2 = list[j2];
+            if (b2.dead || b2.spawnT > 0) continue;
+            var dx2 = b2.x - a2.x, dy2 = b2.y - a2.y;
+            var min2 = a2.r + b2.r;
+            var d22 = dx2 * dx2 + dy2 * dy2;
+            if (d22 >= min2 * min2 || d22 <= 0.0001) continue;
+            var d2 = Math.sqrt(d22);
+            var push2 = (min2 - d2) * 0.5;
+            var ux2 = dx2 / d2, uy2 = dy2 / d2;
+            a2.x -= ux2 * push2; a2.y -= uy2 * push2;
+            b2.x += ux2 * push2; b2.y += uy2 * push2;
+          }
+        }
       }
     }
   };
