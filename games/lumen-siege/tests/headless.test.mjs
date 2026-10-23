@@ -500,6 +500,104 @@ check('a level offers one pool, and every card is selectable', () => {
   return `3 cards drawn from ${pools.size} pool(s)`;
 });
 
+check('Luck unlocks a fourth offer and every extra-choice card remains clickable', () => {
+  game.newRun();
+  const luck = PG.Upgrades.get('luck');
+  const alternatives = PG.Upgrades.all.filter((u) => u.id !== 'luck').slice(0, 2);
+  game.state = 'upgrade';
+  PG.UI.renderUpgrades([luck].concat(alternatives));
+  PG.UI.showScreen('upgrade');
+  documentEls('.card')[0].click();
+  flushTimers();
+  assert(game.player.extraChoices === 1, `Luck did not add a choice (${game.player.extraChoices})`);
+  assert(game.state === 'playing', `Luck click did not finish the first choice (${game.state})`);
+
+  game.showUpgradeScreen();
+  assert(game.currentOffers.length === 4, `expected 4 offers after Luck, got ${game.currentOffers.length}`);
+  const cards = documentEls('.card');
+  assert(cards.length === 4, `expected 4 rendered cards, got ${cards.length}`);
+  const selected = game.currentOffers[3];
+  cards[3].click();
+  flushTimers();
+  assert(game.state === 'playing', `fourth card did not resume play (${game.state})`);
+  assert(game.player.upgrades[selected.id] > 0, `fourth card ${selected.id} was not applied`);
+  return 'Luck click applied, 4 cards rendered, fourth card click applied';
+});
+
+check('live challenge button cycles 1x/2x/5x/10x and scales spawn pressure', () => {
+  game.newRun();
+  const button = documentStub.getElementById('btn-difficulty');
+  const expected = [2, 5, 10, 1];
+  for (const multiplier of expected) {
+    button.click();
+    assert(game.spawnMultiplier === multiplier,
+      `button should select ${multiplier}x, got ${game.spawnMultiplier}x`);
+  }
+
+  const originalFindSpawnPoint = game.findSpawnPoint;
+  const counts = [];
+  for (const multiplier of [1, 2, 5, 10]) {
+    game.newRun();
+    game.setSpawnMultiplier(multiplier);
+    game.enemies.length = 0;
+    game.spawnTimer = 0;
+    game.findSpawnPoint = function () { return { x: this.player.x + 220, y: this.player.y }; };
+    game.update(1 / 60);
+    assert(game.enemies.length === multiplier,
+      `${multiplier}x should spawn ${multiplier} enemies on tier 1, got ${game.enemies.length}`);
+    assert(game.spawnCapFor(1) === game.maxAliveFor(1) * multiplier,
+      `${multiplier}x live-enemy cap did not scale`);
+    counts.push(game.enemies.length);
+  }
+  game.findSpawnPoint = originalFindSpawnPoint;
+  game.newRun();
+  return `button cycles 2x/5x/10x/1x; tier-1 spawn batches ${counts.join('/')}`;
+});
+
+check('10x challenge sustains a dense horde without quadratic separation cost', () => {
+  game.newRun();
+  game.setSpawnMultiplier(10);
+  const originalResolveContact = game.resolveContact;
+  const originalFindSpawnPoint = game.findSpawnPoint;
+  game.resolveContact = function () {};
+  game.findSpawnPoint = function () {
+    const i = this.enemies.length;
+    return { x: 100 + (i % 18) * 35, y: 100 + Math.floor(i / 18) * 35 };
+  };
+  for (let i = 0; i < 60 * 20; i++) game.update(1 / 60);
+  assert(game.enemies.length > game.maxAliveFor(game.tier),
+    `10x did not exceed the normal cap (${game.enemies.length} alive)`);
+  assert(game.enemies.length <= game.spawnCapFor(game.tier),
+    `enemy count ${game.enemies.length} exceeded cap ${game.spawnCapFor(game.tier)}`);
+
+  const start = Date.now();
+  game._sepFrame = 1;
+  for (let i = 0; i < 10; i++) game.separateEnemies();
+  const elapsed = Date.now() - start;
+  const aliveCount = game.enemies.length;
+  assert(elapsed < 1500, `dense separation took ${elapsed}ms for ${aliveCount} enemies`);
+
+  /* The tier-12 10x cap is 720 bodies. Exercise that upper bound with sleeping
+     enemies so the test measures the horde plumbing, not a random combat outcome. */
+  game.enemies.length = 0;
+  for (let i = 0; i < 720; i++) {
+    const enemy = new PG.Enemy('crawler', 100 + (i % 30) * 30, 100 + Math.floor(i / 30) * 30, 1, 1, false);
+    enemy.spawnT = 5;
+    game.enemies.push(enemy);
+  }
+  game.spawnTimer = 999;
+  const fullStart = Date.now();
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  const fullElapsed = Date.now() - fullStart;
+  assert(game.enemies.length === 720, `720-enemy test lost bodies (${game.enemies.length})`);
+  assert(fullElapsed < 3000, `720-enemy 1s simulation took ${fullElapsed}ms`);
+
+  game.resolveContact = originalResolveContact;
+  game.findSpawnPoint = originalFindSpawnPoint;
+  game.newRun();
+  return `10x reached ${aliveCount} alive; separation ${elapsed}ms; 720-enemy simulation ${fullElapsed}ms`;
+});
+
 check('every upgrade belongs to exactly one pool', () => {
   const loose = PG.Upgrades.all.filter((u) => !PG.Upgrades.poolOf(u.id));
   assert(loose.length === 0, `unassigned: ${loose.map((u) => u.id).join(', ')}`);
@@ -1073,6 +1171,10 @@ check('the arena is open, and the flow field reaches every corner of it', () => 
 
 check('an enemy behind a rock walks around it instead of grinding', () => {
   game.newRun();
+  /* Use a fixed world here: this is a pathfinding regression, not a random-map lottery. */
+  game.world.generate(20261023);
+  game.world.bake();
+  game.world.buildFlow(game.player.x, game.player.y);
   /* find a rock with open space on both sides: the straight line is blocked */
   let rock = null;
   for (let ty = 6; ty < game.world.th - 6 && !rock; ty++) {
