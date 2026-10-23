@@ -370,6 +370,19 @@
       g.t = 0;
       return g;
     }
+    /* A full pickup pool must never silently delete earned XP. Consolidate into
+       a matching nearby orb; its stored value remains fully collectible. */
+    var chosen = null, best = Infinity;
+    for (var j = 0; j < MAX_GEMS; j++) {
+      var existing = this.items[j];
+      if (!existing.active || existing.kind !== (kind || 'xp')) continue;
+      var d2 = PG.dist2(existing.x, existing.y, x, y);
+      if (d2 < best) { best = d2; chosen = existing; }
+    }
+    if (chosen) {
+      chosen.value += value;
+      return chosen;
+    }
     return null;
   };
 

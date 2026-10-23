@@ -151,7 +151,7 @@
   /* ---------- difficulty ---------- */
 
   Game.prototype.setSpawnMultiplier = function (multiplier) {
-    var allowed = [1, 2, 5, 10];
+    var allowed = [1, 2, 5, 10, 50, 100];
     this.spawnMultiplier = allowed.indexOf(multiplier) >= 0 ? multiplier : 1;
     /* Apply a new challenge setting promptly, without interrupting the current run. */
     if (this.state === 'playing' && this.spawnMultiplier > 1) {
