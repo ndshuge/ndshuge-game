@@ -1944,7 +1944,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   var zoomOverlay = document.getElementById('zoom-overlay');
 
   function switchWeapon(idx) {
-    if (idx === weaponIdx || state !== 'play') return;
+    if (idx < 0 || idx >= WEAPONS.length || idx === weaponIdx || state !== 'play') return;
     weaponIdx = idx;
     cooldown = 0;
     cancelReload();
@@ -1956,6 +1956,8 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     gun = WEAPONS[idx].model;
     gunKick = 0.9; gunRaise = 0.6;
     updateWeaponSlot();
+    syncTouchWeaponUI();
+    setTouchWeaponPicker(false);
     sndReload();
   }
 
@@ -4180,9 +4182,34 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   /* ================= 状态 / 设置 ================= */
   var state = 'menu';   // menu | play | paused | result
   var settings = { sens: 1.2, bots: 2, mode: 'free', train: 'move', map: 'dust' };
-  var isTouchDevice = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  var isTouchDevice = !!((window.matchMedia && window.matchMedia('(pointer: coarse)').matches) ||
+    (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
   var clearTouchGestures = null;
   if (isTouchDevice) document.body.classList.add('touch-device');
+  function setTouchWeaponPicker(open) {
+    if (!isTouchDevice) return;
+    var picker = document.getElementById('touch-weapon-picker');
+    picker.hidden = !open;
+    document.getElementById('touch-switch').setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+  function syncTouchWeaponUI() {
+    if (!isTouchDevice) return;
+    var aimButton = document.getElementById('touch-aim');
+    var canScope = WEAPONS[weaponIdx].zoom;
+    aimButton.disabled = !canScope;
+    aimButton.textContent = canScope && zoomed ? '关镜' : '开镜';
+    aimButton.setAttribute('aria-pressed', canScope && zoomed ? 'true' : 'false');
+    aimButton.setAttribute('aria-label', canScope ? (zoomed ? '关闭瞄准镜' : '打开瞄准镜') : '仅春田步枪可以开镜');
+    document.querySelectorAll('#touch-weapon-picker [data-weapon]').forEach(function (button) {
+      button.setAttribute('aria-pressed', Number(button.dataset.weapon) === weaponIdx ? 'true' : 'false');
+    });
+  }
+  function toggleScope() {
+    if (state !== 'play' || !WEAPONS[weaponIdx].zoom) return;
+    zoomed = !zoomed;
+    if (zoomed) sndScope();
+    syncTouchWeaponUI();
+  }
   function setTouchPlaying(playing) {
     if (!isTouchDevice) return;
     document.body.classList.toggle('touch-playing', !!playing);
@@ -4190,8 +4217,9 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
       firing = false;
       ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].forEach(function (key) { keys[key] = false; });
       if (clearTouchGestures) clearTouchGestures();
+      setTouchWeaponPicker(false);
     }
-    document.getElementById('touch-aim').setAttribute('aria-pressed', zoomed ? 'true' : 'false');
+    syncTouchWeaponUI();
   }
   function syncMenuControls() {
     document.querySelectorAll('#menu .m-btn').forEach(function (button) {
@@ -4224,6 +4252,8 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     zoomOverlay.style.display = 'none';
     crosshairEl.style.opacity = 1;
     updateWeaponSlot();
+    syncTouchWeaponUI();
+    setTouchWeaponPicker(false);
     player.hp = 100; player.spread = 0.0015;
     player.recoilPitch = 0; player.recoilYaw = 0;
     player.respawnT = 0; player.killShake = 0;
@@ -4332,7 +4362,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     storyEl.style.pointerEvents = 'none';
     state = 'paused';
     pausedFromPlay = !!paused;
-    startBtn.textContent = paused ? '继续作战' : (settings.mode === 'hold' ? '开始坚守' : settings.mode === 'campaign' ? '开始战役' : '开始作战');
+    startBtn.textContent = paused ? '继续游戏' : (settings.mode === 'hold' ? '开始坚守' : settings.mode === 'campaign' ? '开始战役' : '开始游戏');
     menuStats.style.display = paused ? 'grid' : 'none';
     mFoot.style.display = paused ? 'none' : '';
     var trainDesc = settings.train === 'static' ? '德军站桩不动、不开火 · 纯粹练准度与拉枪' :
@@ -4390,7 +4420,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
 
   // 暂停中改配置 → 点开始变为开新局
   function syncStartBtn() {
-    startBtn.textContent = pausedFromPlay ? '继续作战' : (settings.mode === 'hold' ? '开始坚守' : settings.mode === 'campaign' ? '开始战役' : '开始作战');
+    startBtn.textContent = pausedFromPlay ? '继续游戏' : (settings.mode === 'hold' ? '开始坚守' : settings.mode === 'campaign' ? '开始战役' : '开始游戏');
   }
 
   // 灵敏度
@@ -4515,8 +4545,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
       lastRmb = Date.now();
       // 点击切换开镜（右键松开不关镜；浏览器手势已在捕获层拦截）
       if (WEAPONS[weaponIdx].zoom) {
-        zoomed = !zoomed;
-        if (zoomed) sndScope();
+        toggleScope();
       }
     } else if (ev.button === 0) {
       ev.preventDefault();
@@ -4543,6 +4572,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     zoomed = false;
     firing = false;
     keys = {};
+    syncTouchWeaponUI();
   });
   canvas.addEventListener('wheel', function (ev) {
     ev.preventDefault();
@@ -4551,6 +4581,16 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     var dir = ev.deltaY < 0 ? 1 : -1;
     switchWeapon((weaponIdx + dir + WEAPONS.length) % WEAPONS.length);
   }, { passive: false });
+  // Prevent webpage pinch/double-tap zoom while preserving the Springfield's in-game scope.
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (eventName) {
+    document.addEventListener(eventName, function (ev) { if (ev.cancelable) ev.preventDefault(); }, { passive: false });
+  });
+  document.addEventListener('touchmove', function (ev) {
+    if (ev.touches.length > 1 && ev.cancelable) ev.preventDefault();
+  }, { passive: false });
+  document.addEventListener('dblclick', function (ev) {
+    if (ev.target.closest('#game, #touch-controls, #title-screen, #menu')) ev.preventDefault();
+  });
   document.addEventListener('mousemove', function (ev) {
     if (state !== 'play') return;
     if (document.pointerLockElement !== canvas) return;
@@ -4598,6 +4638,21 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   // 触屏仅映射到现有输入：摇杆 -> WASD，手指拖动 -> 鼠标视角，按键 -> 原动作。
   // 不新建移动端战斗规则，也不介入 shoot / switchWeapon / updatePlayer 的实现。
   if (isTouchDevice) {
+    // iOS can defer/suppress a synthetic click after a touch; apply once on pointerdown.
+    // Keep click as a keyboard/assistive-technology fallback without double activating.
+    function bindTouchCommand(button, action) {
+      var lastTouch = 0;
+      button.addEventListener('pointerdown', function (ev) {
+        if (ev.pointerType !== 'touch') return;
+        ev.preventDefault();
+        lastTouch = Date.now();
+        action();
+      });
+      button.addEventListener('click', function (ev) {
+        if (ev.detail !== 0 && Date.now() - lastTouch < 700) return;
+        action();
+      });
+    }
     var movePad = document.getElementById('touch-move');
     var moveStick = document.getElementById('touch-stick');
     var movePointer = null;
@@ -4691,21 +4746,23 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
         setTimeout(function () { keys.Space = false; }, 90);
       });
     });
-    document.getElementById('touch-switch').addEventListener('click', function () {
-      if (state === 'play') {
-        switchWeapon((weaponIdx + 1) % WEAPONS.length);
-        document.getElementById('touch-aim').setAttribute('aria-pressed', zoomed ? 'true' : 'false');
-      }
+    bindTouchCommand(document.getElementById('touch-switch'), function () {
+      if (state !== 'play') return;
+      var picker = document.getElementById('touch-weapon-picker');
+      setTouchWeaponPicker(picker.hidden);
     });
-    document.getElementById('touch-aim').addEventListener('click', function () {
-      if (state !== 'play' || !WEAPONS[weaponIdx].zoom) return;
-      zoomed = !zoomed;
-      if (zoomed) sndScope();
-      this.setAttribute('aria-pressed', zoomed ? 'true' : 'false');
+    document.querySelectorAll('#touch-weapon-picker [data-weapon]').forEach(function (button) {
+      bindTouchCommand(button, function () {
+        if (state !== 'play') return;
+        switchWeapon(Number(button.dataset.weapon));
+        setTouchWeaponPicker(false);
+      });
     });
-    document.getElementById('touch-pause').addEventListener('click', function () {
+    bindTouchCommand(document.getElementById('touch-aim'), toggleScope);
+    bindTouchCommand(document.getElementById('touch-pause'), function () {
       if (state === 'play') showMenu(true);
     });
+    syncTouchWeaponUI();
     window.addEventListener('blur', clearTouchGestures);
   }
 
@@ -4771,17 +4828,21 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   /* ================= 入口标题画面 ================= */
   var titleScreen = document.getElementById('title-screen');
   var tsEnter = document.getElementById('ts-enter');
-  tsEnter.addEventListener('click', function () {
+  function leaveTitleScreen() {
     initAudio();
     loadVoices();
     bgmStart();
     if (ac) { tone(ac.currentTime, 'sine', 220, 480, 0.22, 0.18); }
-    titleScreen.style.transition = 'opacity 0.8s';
-    titleScreen.style.opacity = 0;
-    setTimeout(function () {
-      titleScreen.style.display = 'none';
-      showMenu(false);
-    }, 800);
+    titleScreen.style.display = 'none';
+  }
+  tsEnter.addEventListener('click', function () {
+    leaveTitleScreen();
+    // Keep pointer lock in the original user gesture on desktop.
+    startGame();
+  });
+  document.getElementById('ts-settings').addEventListener('click', function () {
+    leaveTitleScreen();
+    showMenu(false);
   });
   window.__test = {
     setPlay: function () { state = 'play'; hud.style.display = 'block'; menu.classList.add('hidden'); },
