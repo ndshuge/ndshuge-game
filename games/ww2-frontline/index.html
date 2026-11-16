@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <title>西线前线 · 沉浸式二战射击</title>
 <style>
@@ -181,6 +181,7 @@
   #result .r-btns button:first-child { background: #c8961e; border-color: #ffd75e; color: #1a1405; font-weight: 800; }
   #result .r-btns button:first-child:hover { background: #ffd75e; }
 </style>
+<link rel="stylesheet" href="frontline-ui.css">
 </head>
 <body>
 <canvas id="game"></canvas>
@@ -254,6 +255,18 @@
   <div id="hint">WASD 移动 · 鼠标射击 · Shift 静步 · 空格 跳跃 · 1~5 或滚轮 换枪 · 弹匣打空自动装弹 · 右键 点击开镜(春田)</div>
 </div>
 
+<!-- 仅触屏设备出现的输入层；不更改原有武器、伤害与战斗规则 -->
+<div id="touch-controls" aria-label="触屏操作">
+  <button id="touch-pause" type="button" aria-label="暂停游戏">Ⅱ</button>
+  <div id="touch-move" role="group" aria-label="移动摇杆"><span id="touch-stick"></span></div>
+  <div id="touch-actions">
+    <button id="touch-aim" type="button" aria-label="开镜">开镜</button>
+    <button id="touch-switch" type="button" aria-label="切换武器">换枪</button>
+    <button id="touch-jump" type="button" aria-label="跳跃">跳跃</button>
+    <button id="touch-fire" type="button" aria-label="射击">射击</button>
+  </div>
+</div>
+
 <!-- 挑战结算 -->
 <div id="result">
   <div class="r-title" id="r-title">挑战结束</div>
@@ -267,70 +280,82 @@
   </div>
 </div>
 
-<div id="menu" class="hidden">
-  <div class="m-title">西线前线</div>
-  <div class="m-sub">Frontline Assault · WWII</div>
-  <div class="m-panel">
-    <div class="m-row">
-      <span>鼠标灵敏度</span>
-      <input type="range" id="sens" min="0.4" max="2.8" step="0.1" value="1.2">
-      <span class="val" id="sens-val">1.2</span>
-    </div>
-    <div class="m-row">
-      <span>模式</span>
-      <div class="m-btns">
-        <button class="m-btn" data-mode="free">前线巡逻</button>
-        <button class="m-btn" data-mode="challenge">60秒突击</button>
-        <button class="m-btn" data-mode="hold">坚守阵地</button>
-        <button class="m-btn" data-mode="campaign">战役模式</button>
+<div id="menu" class="hidden" role="dialog" aria-modal="true" aria-labelledby="m-title">
+  <div class="m-shell">
+    <header class="m-heading">
+      <div>
+        <p class="m-kicker">作战准备 / 1944</p>
+        <h2 class="m-title" id="m-title">任务配置</h2>
+        <p class="m-sub">设定本次出击的地点与任务，随时可以返回调整。</p>
+      </div>
+      <a class="m-home" href="../../">返回游戏厅</a>
+    </header>
+    <div class="m-panel">
+      <section class="m-column m-primary" aria-labelledby="m-mission-title">
+        <h3 class="m-section-title" id="m-mission-title">选择任务</h3>
+        <div class="m-row">
+          <div class="m-label">行动模式</div>
+          <div class="m-btns m-modes" role="group" aria-label="行动模式">
+            <button class="m-btn" data-mode="free">前线巡逻</button>
+            <button class="m-btn" data-mode="challenge">60秒突击</button>
+            <button class="m-btn" data-mode="hold">坚守阵地</button>
+            <button class="m-btn" data-mode="campaign">战役模式</button>
+          </div>
+        </div>
+        <div class="m-row">
+          <div class="m-label">战场</div>
+          <div class="m-btns m-maps" role="group" aria-label="战场">
+            <button class="m-btn" data-map="dust">诺曼底废墟</button>
+            <button class="m-btn" data-map="snow">东线雪原</button>
+            <button class="m-btn" data-map="inferno">柏林巷战</button>
+          </div>
+        </div>
+      </section>
+      <section class="m-column m-secondary" aria-labelledby="m-setup-title">
+        <h3 class="m-section-title" id="m-setup-title">交战设置</h3>
+        <div class="m-row">
+          <div class="m-label">训练目标</div>
+          <div class="m-btns m-targets" role="group" aria-label="训练目标">
+            <button class="m-btn" data-train="move">移动靶</button>
+            <button class="m-btn" data-train="static">静止靶</button>
+            <button class="m-btn" data-train="head">爆头模式</button>
+          </div>
+        </div>
+        <div class="m-row">
+          <div class="m-label">德军数量</div>
+          <div class="m-btns m-bots" role="group" aria-label="德军数量">
+            <button class="m-btn" data-bots="1">1</button>
+            <button class="m-btn" data-bots="2">2</button>
+            <button class="m-btn" data-bots="3">3</button>
+            <button class="m-btn" data-bots="4">4</button>
+            <button class="m-btn" data-bots="5">5</button>
+          </div>
+        </div>
+        <div class="m-row m-sensitivity">
+          <label class="m-label" for="sens">视角灵敏度</label>
+          <div class="m-range"><input type="range" id="sens" min="0.4" max="2.8" step="0.1" value="1.2"><output class="val" for="sens" id="sens-val">1.2</output></div>
+        </div>
+      </section>
+      <div class="m-action">
+        <div class="m-best" id="m-best" aria-live="polite"></div>
+        <button id="start-btn">开始作战</button>
+        <div class="m-help m-help-desktop">
+          WASD 移动 / 鼠标瞄准与射击 / Shift 静步 / 空格跳跃 / 1—5 换枪 / 右键开镜 / Esc 暂停
+        </div>
+        <div class="m-help m-help-touch">左侧摇杆移动，右侧滑动瞄准。屏幕按钮用于射击、跳跃、换枪与暂停。</div>
+        <div class="m-stats" id="menu-stats" style="display:none">
+          <div>击杀 <b id="ms-kills">0</b></div>
+          <div>死亡 <b id="ms-deaths">0</b></div>
+          <div>爆头 <b class="g" id="ms-hs">0</b></div>
+          <div>爆头率 <b class="g" id="ms-hsp">-</b></div>
+          <div>命中率 <b id="ms-acc">-</b></div>
+          <div>最高连杀 <b id="ms-streak">0</b></div>
+          <div>用时 <b id="ms-time">-</b></div>
+          <div>射击 <b id="ms-shots">0</b></div>
+        </div>
+        <div class="m-foot" id="m-foot">德军会移动、跳跃、反击。训练模式提供无限备弹。</div>
       </div>
     </div>
-    <div class="m-row">
-      <span>战场</span>
-      <div class="m-btns">
-        <button class="m-btn" data-map="dust">诺曼底废墟</button>
-        <button class="m-btn" data-map="snow">东线雪原</button>
-        <button class="m-btn" data-map="inferno">柏林巷战</button>
-      </div>
-    </div>
-    <div class="m-row">
-      <span>靶型</span>
-      <div class="m-btns">
-        <button class="m-btn" data-train="move">移动靶</button>
-        <button class="m-btn" data-train="static">静止靶</button>
-        <button class="m-btn" data-train="head">爆头模式</button>
-      </div>
-    </div>
-    <div class="m-row">
-      <span>德军数量</span>
-      <div class="m-btns">
-        <button class="m-btn" data-bots="1">1</button>
-        <button class="m-btn" data-bots="2">2</button>
-        <button class="m-btn" data-bots="3">3</button>
-        <button class="m-btn" data-bots="4">4</button>
-        <button class="m-btn" data-bots="5">5</button>
-      </div>
-    </div>
-    <div class="m-best" id="m-best"></div>
-    <button id="start-btn">开始作战</button>
-    <div class="m-help">
-      <b>W A S D</b> 移动 &nbsp; <b>鼠标</b> 瞄准 / 射击(按住连发) &nbsp; <b>Shift</b> 静步<br>
-      <b>空格</b> 跳跃 &nbsp; <b>1~5 / 滚轮</b> 换枪 &nbsp; <b>右键</b> 点击开镜(春田)<br>
-      <b>Esc</b> 暂停 · 弹匣打空自动装弹，备弹无限<br>
-      靶型：<b>移动靶</b>德军游荡会打 · <b>静止靶</b>站桩纯练准度 · <b>爆头模式</b>只有爆头才有效<br>
-      战役：四阶段剧情推进 · 死亡从本关重来 · 打穿诺曼底
-    </div>
-    <div class="m-stats" id="menu-stats" style="display:none">
-      <div>击杀 <b id="ms-kills">0</b></div>
-      <div>死亡 <b id="ms-deaths">0</b></div>
-      <div>爆头 <b class="g" id="ms-hs">0</b></div>
-      <div>爆头率 <b class="g" id="ms-hsp">-</b></div>
-      <div>命中率 <b id="ms-acc">-</b></div>
-      <div>最高连杀 <b id="ms-streak">0</b></div>
-      <div>用时 <b id="ms-time">-</b></div>
-      <div>射击 <b id="ms-shots">0</b></div>
-    </div>
-    <div class="m-foot" id="m-foot">德军会移动、跳跃、反击 · 伤害极低，放心作战<br>练习模式：无限备弹，专注压枪与爆头</div>
   </div>
 </div>
 
@@ -342,13 +367,21 @@
 <!-- 入口标题画面 -->
 <div id="title-screen">
   <div class="ts-grad"></div>
-  <div class="ts-badge">★ 盟军 · 西线 ★</div>
-  <div class="ts-title">西线前线</div>
-  <div class="ts-sub">FRONTLINE ASSAULT · 诺曼底 1944</div>
-  <div class="ts-desc">德军的精锐机器人部队已部署滩头——钢铁铸就的突击兵，不惧死亡，不知疲倦</div>
-  <button id="ts-enter" class="ts-btn">进入战场 ▸</button>
-  <div class="ts-tip">WASD 移动 · 鼠标射击 · 1~5 换枪 · 弹匣打空自动装填</div>
-  <div class="ts-ver">手感母版：CS:GO 沙漠练枪场 · 体素士兵模型：CC0 Shock Trooper</div>
+  <header class="ts-topline">
+    <span>西线作战档案 <span class="ts-edition">/ 1944</span></span>
+    <a href="../../" class="ts-back">返回游戏厅</a>
+  </header>
+  <main class="ts-content">
+    <div class="ts-badge">1944 年 6 月 6 日　诺曼底</div>
+    <h1 class="ts-title">西线前线</h1>
+    <p class="ts-sub">FRONTLINE ASSAULT</p>
+    <p class="ts-desc">登陆之后，战线仍未推进。德军的机械化突击兵正在集结。<br>选择战场、检查装备，然后出发。</p>
+    <button id="ts-enter" class="ts-btn">进入作战准备 <span aria-hidden="true">↗</span></button>
+    <p class="ts-tip ts-tip-desktop">WASD 移动　/　鼠标瞄准与射击　/　数字键切换武器</p>
+    <p class="ts-tip ts-tip-touch">支持触屏操作 · 横屏体验更佳</p>
+  </main>
+  <div class="ts-side-note" aria-hidden="true"><span>06</span><span>JUN</span><span>1944</span></div>
+  <footer class="ts-ver"><span>FRONTLINE / OPERATION BRIEFING</span><span>三维战场实验 · 游戏版本 2.0</span></footer>
 </div>
 
 <script src="three.min.js"></script>

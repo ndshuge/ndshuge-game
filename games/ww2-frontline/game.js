@@ -3708,6 +3708,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     document.getElementById('r-new').style.display = (isNew && hold.wave > 0) ? 'block' : 'none';
     resultEl.style.display = 'flex';
     hud.style.display = 'none';
+    setTouchPlaying(false);
     sndChallengeEnd();
     document.exitPointerLock && document.exitPointerLock();
   }
@@ -3953,6 +3954,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     document.getElementById('r-new').style.display = isNew ? 'block' : 'none';
     resultEl.style.display = 'flex';
     hud.style.display = 'none';
+    setTouchPlaying(false);
     sndChallengeEnd();
     document.exitPointerLock && document.exitPointerLock();
   }
@@ -4178,6 +4180,28 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   /* ================= 状态 / 设置 ================= */
   var state = 'menu';   // menu | play | paused | result
   var settings = { sens: 1.2, bots: 2, mode: 'free', train: 'move', map: 'dust' };
+  var isTouchDevice = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  var clearTouchGestures = null;
+  if (isTouchDevice) document.body.classList.add('touch-device');
+  function setTouchPlaying(playing) {
+    if (!isTouchDevice) return;
+    document.body.classList.toggle('touch-playing', !!playing);
+    if (!playing) {
+      firing = false;
+      ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].forEach(function (key) { keys[key] = false; });
+      if (clearTouchGestures) clearTouchGestures();
+    }
+    document.getElementById('touch-aim').setAttribute('aria-pressed', zoomed ? 'true' : 'false');
+  }
+  function syncMenuControls() {
+    document.querySelectorAll('#menu .m-btn').forEach(function (button) {
+      var selected = (button.dataset.mode && button.dataset.mode === settings.mode) ||
+        (button.dataset.map && button.dataset.map === settings.map) ||
+        (button.dataset.train && button.dataset.train === settings.train) ||
+        (button.dataset.bots && Number(button.dataset.bots) === settings.bots);
+      button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+    });
+  }
   var challenge = { score: 0, time: 60, active: false };
   var best = null;
   try { best = JSON.parse(localStorage.getItem('ww2_best') || 'null'); } catch (e) { best = null; }
@@ -4253,6 +4277,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     document.getElementById('r-new').style.display = (isNew && challenge.score > 0) ? 'block' : 'none';
     resultEl.style.display = 'flex';
     hud.style.display = 'none';
+    setTouchPlaying(false);
     sndChallengeEnd();
     document.exitPointerLock && document.exitPointerLock();
   }
@@ -4321,6 +4346,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     refreshBest();
     menu.classList.remove('hidden');
     hud.style.display = 'none';
+    setTouchPlaying(false);
     document.exitPointerLock && document.exitPointerLock();
   }
 
@@ -4355,10 +4381,11 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     resultEl.style.display = 'none';
     menu.classList.add('hidden');
     hud.style.display = 'block';
+    setTouchPlaying(true);
     hint.style.opacity = 1;
     setTimeout(function () { hint.style.transition = 'opacity 1.2s'; hint.style.opacity = 0; }, 4000);
     state = 'play';
-    canvas.requestPointerLock();
+    if (!isTouchDevice && canvas.requestPointerLock) canvas.requestPointerLock();
   }
 
   // 暂停中改配置 → 点开始变为开新局
@@ -4375,10 +4402,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   document.querySelectorAll('#menu .m-btn[data-bots]').forEach(function (b) {
     b.addEventListener('click', function () {
       settings.bots = parseInt(b.dataset.bots, 10);
-      document.querySelectorAll('#menu .m-btn[data-bots]').forEach(function (x) {
-        x.style.borderColor = x === b ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = x === b ? '#ffd75e' : '#ddd';
-      });
+      syncMenuControls();
       try { localStorage.setItem('ww2_bots', String(settings.bots)); } catch (e) {}
       pausedFromPlay = false; syncStartBtn();
     });
@@ -4386,10 +4410,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   document.querySelectorAll('#menu .m-btn[data-train]').forEach(function (b) {
     b.addEventListener('click', function () {
       settings.train = b.dataset.train;
-      document.querySelectorAll('#menu .m-btn[data-train]').forEach(function (x) {
-        x.style.borderColor = x === b ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = x === b ? '#ffd75e' : '#ddd';
-      });
+      syncMenuControls();
       try { localStorage.setItem('ww2_train', settings.train); } catch (e) {}
       pausedFromPlay = false; syncStartBtn();
     });
@@ -4401,11 +4422,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     settings.map = id;
     buildMap(id);
     resetStats();
-    document.querySelectorAll('#menu .m-btn[data-map]').forEach(function (x) {
-      var on = x.dataset.map === id;
-      x.style.borderColor = on ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-      x.style.color = on ? '#ffd75e' : '#ddd';
-    });
+    syncMenuControls();
     try { localStorage.setItem('ww2_map', id); } catch (e) {}
   }
   document.querySelectorAll('#menu .m-btn[data-map]').forEach(function (b) {
@@ -4414,10 +4431,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   document.querySelectorAll('#menu .m-btn[data-mode]').forEach(function (b) {
     b.addEventListener('click', function () {
       settings.mode = b.dataset.mode;
-      document.querySelectorAll('#menu .m-btn[data-mode]').forEach(function (x) {
-        x.style.borderColor = x === b ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = x === b ? '#ffd75e' : '#ddd';
-      });
+      syncMenuControls();
       try { localStorage.setItem('ww2_mode', settings.mode); } catch (e) {}
       pausedFromPlay = false; syncStartBtn(); refreshBest();
     });
@@ -4435,42 +4449,19 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     var b = localStorage.getItem('ww2_bots');
     if (b) {
       settings.bots = clamp(parseInt(b, 10), 1, 5);
-      document.querySelectorAll('#menu .m-btn[data-bots]').forEach(function (x) {
-        var on = parseInt(x.dataset.bots, 10) === settings.bots;
-        x.style.borderColor = on ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = on ? '#ffd75e' : '#ddd';
-      });
     }
     var m = localStorage.getItem('ww2_mode');
     if (m && (m === 'free' || m === 'challenge' || m === 'hold' || m === 'campaign')) {
       settings.mode = m;
-      document.querySelectorAll('#menu .m-btn[data-mode]').forEach(function (x) {
-        var on = x.dataset.mode === settings.mode;
-        x.style.borderColor = on ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = on ? '#ffd75e' : '#ddd';
-      });
     }
     var tr = localStorage.getItem('ww2_train');
     if (tr && (tr === 'move' || tr === 'static' || tr === 'head')) {
       settings.train = tr;
-      document.querySelectorAll('#menu .m-btn[data-train]').forEach(function (x) {
-        var on = x.dataset.train === settings.train;
-        x.style.borderColor = on ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-        x.style.color = on ? '#ffd75e' : '#ddd';
-      });
     }
     var mp = localStorage.getItem('ww2_map');
     if (mp && (mp === 'dust' || mp === 'snow' || mp === 'inferno')) settings.map = mp;
   } catch (e) {}
-  // 兜底高亮：确保当前设置对应的按钮有金色边框
-  document.querySelectorAll('#menu .m-btn').forEach(function (x) {
-    var is = (x.hasAttribute('data-mode') && x.dataset.mode === settings.mode) ||
-             (x.hasAttribute('data-bots') && parseInt(x.dataset.bots, 10) === settings.bots) ||
-             (x.hasAttribute('data-train') && x.dataset.train === settings.train) ||
-             (x.hasAttribute('data-map') && x.dataset.map === settings.map);
-    x.style.borderColor = is ? '#ffd75e' : 'rgba(255,255,255,0.25)';
-    x.style.color = is ? '#ffd75e' : '#ddd';
-  });
+  syncMenuControls();
   refreshBest();
   function startBtnClick() {
     if (pausedFromPlay) {
@@ -4479,7 +4470,8 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
       menu.classList.add('hidden');
       hud.style.display = 'block';
       state = 'play';
-      canvas.requestPointerLock();
+      setTouchPlaying(true);
+      if (!isTouchDevice && canvas.requestPointerLock) canvas.requestPointerLock();
     } else {
       startGame();
     }
@@ -4516,6 +4508,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   // 减少浏览器右键手势/菜单对操作的干扰）
   canvas.addEventListener('pointerdown', function (ev) {
     if (state !== 'play') return;
+    if (ev.pointerType === 'touch') return; // 手指拖动画面只转动视角，射击交给独立按钮
     if (ev.button === 2) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -4532,7 +4525,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
     }
   });
   window.addEventListener('pointerup', function (ev) {
-    if (ev.button === 0) firing = false;
+    if (ev.button === 0 && ev.pointerType !== 'touch') firing = false;
   });
   // 右键/中键的 click 类事件也拦掉
   document.addEventListener('auxclick', function (ev) {
@@ -4568,6 +4561,7 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   });
 
   document.addEventListener('pointerlockchange', function () {
+    if (isTouchDevice) return;
     if (document.pointerLockElement === canvas) { escPressed = false; return; }
     if (state !== 'play') return;
     // Esc 或非右键原因丢锁才暂停；右键菜单导致的丢锁自动重锁，不打断游戏
@@ -4596,10 +4590,124 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   });
   // 兜底：若锁意外丢失（如浏览器拒绝自动重锁），点击画面恢复
   canvas.addEventListener('click', function () {
-    if (state === 'play' && document.pointerLockElement !== canvas) {
+    if (!isTouchDevice && state === 'play' && document.pointerLockElement !== canvas) {
       try { canvas.requestPointerLock(); } catch (e) {}
     }
   });
+
+  // 触屏仅映射到现有输入：摇杆 -> WASD，手指拖动 -> 鼠标视角，按键 -> 原动作。
+  // 不新建移动端战斗规则，也不介入 shoot / switchWeapon / updatePlayer 的实现。
+  if (isTouchDevice) {
+    var movePad = document.getElementById('touch-move');
+    var moveStick = document.getElementById('touch-stick');
+    var movePointer = null;
+    var lookPointer = null;
+    var lastLookX = 0;
+    var lastLookY = 0;
+    function stopMoving() {
+      movePointer = null;
+      ['KeyW', 'KeyA', 'KeyS', 'KeyD'].forEach(function (key) { keys[key] = false; });
+      moveStick.style.transform = '';
+    }
+    function moveFromPointer(ev) {
+      var rect = movePad.getBoundingClientRect();
+      var limit = rect.width / 2 - 24;
+      var dx = ev.clientX - (rect.left + rect.width / 2);
+      var dy = ev.clientY - (rect.top + rect.height / 2);
+      var len = Math.hypot(dx, dy);
+      if (len > limit) { dx *= limit / len; dy *= limit / len; }
+      moveStick.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      keys.KeyW = dy < -limit * .25;
+      keys.KeyS = dy > limit * .25;
+      keys.KeyA = dx < -limit * .25;
+      keys.KeyD = dx > limit * .25;
+    }
+    movePad.addEventListener('pointerdown', function (ev) {
+      if (state !== 'play' || movePointer !== null) return;
+      ev.preventDefault();
+      movePointer = ev.pointerId;
+      movePad.setPointerCapture(ev.pointerId);
+      moveFromPointer(ev);
+    });
+    movePad.addEventListener('pointermove', function (ev) {
+      if (ev.pointerId === movePointer) moveFromPointer(ev);
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+      movePad.addEventListener(eventName, function (ev) { if (ev.pointerId === movePointer) stopMoving(); });
+    });
+
+    canvas.addEventListener('pointerdown', function (ev) {
+      if (state !== 'play' || ev.pointerType !== 'touch' || lookPointer !== null) return;
+      if (ev.clientX < window.innerWidth * .35) return;
+      ev.preventDefault();
+      lookPointer = ev.pointerId;
+      lastLookX = ev.clientX;
+      lastLookY = ev.clientY;
+      canvas.setPointerCapture(ev.pointerId);
+    });
+    canvas.addEventListener('pointermove', function (ev) {
+      if (ev.pointerId !== lookPointer || state !== 'play') return;
+      var sensitivity = settings.sens * .004;
+      player.yaw -= (ev.clientX - lastLookX) * sensitivity;
+      player.pitch = clamp(player.pitch - (ev.clientY - lastLookY) * sensitivity, -1.5, 1.5);
+      lastLookX = ev.clientX;
+      lastLookY = ev.clientY;
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+      canvas.addEventListener(eventName, function (ev) { if (ev.pointerId === lookPointer) lookPointer = null; });
+    });
+
+    var fireBtn = document.getElementById('touch-fire');
+    var firePointer = null;
+    clearTouchGestures = function () {
+      stopMoving();
+      lookPointer = null;
+      firePointer = null;
+    };
+    fireBtn.addEventListener('pointerdown', function (ev) {
+      if (state !== 'play' || firePointer !== null) return;
+      ev.preventDefault();
+      firePointer = ev.pointerId;
+      fireBtn.setPointerCapture(ev.pointerId);
+      firing = true;
+      shoot();
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+      fireBtn.addEventListener(eventName, function (ev) {
+        if (ev.pointerId === firePointer) { firePointer = null; firing = false; }
+      });
+    });
+
+    var jumpBtn = document.getElementById('touch-jump');
+    jumpBtn.addEventListener('pointerdown', function (ev) {
+      if (state !== 'play') return;
+      ev.preventDefault();
+      keys.Space = true;
+      jumpBtn.setPointerCapture(ev.pointerId);
+    });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (eventName) {
+      jumpBtn.addEventListener(eventName, function () {
+        // 快速轻触也保留至少一帧跳跃输入。
+        setTimeout(function () { keys.Space = false; }, 90);
+      });
+    });
+    document.getElementById('touch-switch').addEventListener('click', function () {
+      if (state === 'play') {
+        switchWeapon((weaponIdx + 1) % WEAPONS.length);
+        document.getElementById('touch-aim').setAttribute('aria-pressed', zoomed ? 'true' : 'false');
+      }
+    });
+    document.getElementById('touch-aim').addEventListener('click', function () {
+      if (state !== 'play' || !WEAPONS[weaponIdx].zoom) return;
+      zoomed = !zoomed;
+      if (zoomed) sndScope();
+      this.setAttribute('aria-pressed', zoomed ? 'true' : 'false');
+    });
+    document.getElementById('touch-pause').addEventListener('click', function () {
+      if (state === 'play') showMenu(true);
+    });
+    window.addEventListener('blur', clearTouchGestures);
+  }
 
   /* ================= 主循环 ================= */
   var menuCamT = 0;
@@ -4663,16 +4771,6 @@ window.addEventListener('error', function (e) { window.__errs.push(String(e.mess
   /* ================= 入口标题画面 ================= */
   var titleScreen = document.getElementById('title-screen');
   var tsEnter = document.getElementById('ts-enter');
-  // 燃烧余烬粒子
-  for (var te = 0; te < 18; te++) {
-    var em = document.createElement('div');
-    em.className = 'ts-ember';
-    em.style.left = (Math.random() * 100) + '%';
-    em.style.setProperty('--dur', (4 + Math.random() * 5) + 's');
-    em.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
-    em.style.animationDelay = (Math.random() * 8) + 's';
-    titleScreen.appendChild(em);
-  }
   tsEnter.addEventListener('click', function () {
     initAudio();
     loadVoices();
