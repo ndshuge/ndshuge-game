@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <link rel="icon" type="image/svg+xml" href="../../favicon.svg">
 <title>西线前线 · 沉浸式二战射击</title>
 <style>
@@ -259,9 +259,16 @@
 <div id="touch-controls" aria-label="触屏操作">
   <button id="touch-pause" type="button" aria-label="暂停游戏">Ⅱ</button>
   <div id="touch-move" role="group" aria-label="移动摇杆"><span id="touch-stick"></span></div>
+  <div id="touch-weapon-picker" role="group" aria-label="选择武器" hidden>
+    <button type="button" data-weapon="0">汤普森</button>
+    <button type="button" data-weapon="1">春田步枪</button>
+    <button type="button" data-weapon="2">格斗刀</button>
+    <button type="button" data-weapon="3">霰弹枪</button>
+    <button type="button" data-weapon="4">火箭筒</button>
+  </div>
   <div id="touch-actions">
-    <button id="touch-aim" type="button" aria-label="开镜">开镜</button>
-    <button id="touch-switch" type="button" aria-label="切换武器">换枪</button>
+    <button id="touch-aim" type="button" aria-label="开镜" aria-pressed="false" disabled>开镜</button>
+    <button id="touch-switch" type="button" aria-label="选择武器" aria-expanded="false" aria-controls="touch-weapon-picker">换枪</button>
     <button id="touch-jump" type="button" aria-label="跳跃">跳跃</button>
     <button id="touch-fire" type="button" aria-label="射击">射击</button>
   </div>
@@ -269,14 +276,16 @@
 
 <!-- 挑战结算 -->
 <div id="result">
-  <div class="r-title" id="r-title">挑战结束</div>
-  <div class="r-rating" id="r-rating">S</div>
-  <div class="r-score" id="r-score">0 分</div>
-  <div class="r-stats" id="r-stats"></div>
-  <div class="r-new" id="r-new">新纪录！</div>
-  <div class="r-btns">
-    <button id="r-again">再来一局</button>
-    <button id="r-menu">返回菜单</button>
+  <div class="r-card">
+    <div class="r-title" id="r-title">挑战结束</div>
+    <div class="r-rating" id="r-rating">S</div>
+    <div class="r-score" id="r-score">0 分</div>
+    <div class="r-stats" id="r-stats"></div>
+    <div class="r-new" id="r-new">新纪录！</div>
+    <div class="r-btns">
+      <button id="r-again">再玩一次</button>
+      <button id="r-menu">返回菜单</button>
+    </div>
   </div>
 </div>
 
@@ -285,8 +294,8 @@
     <header class="m-heading">
       <div>
         <p class="m-kicker">作战准备 / 1944</p>
-        <h2 class="m-title" id="m-title">任务配置</h2>
-        <p class="m-sub">设定本次出击的地点与任务，随时可以返回调整。</p>
+        <h2 class="m-title" id="m-title">准备开玩</h2>
+        <p class="m-sub">选好模式和地图，点击开始就能玩。</p>
       </div>
       <a class="m-home" href="../../">返回游戏厅</a>
     </header>
@@ -338,11 +347,11 @@
       </section>
       <div class="m-action">
         <div class="m-best" id="m-best" aria-live="polite"></div>
-        <button id="start-btn">开始作战</button>
+        <button id="start-btn">开始游戏</button>
         <div class="m-help m-help-desktop">
           WASD 移动 / 鼠标瞄准与射击 / Shift 静步 / 空格跳跃 / 1—5 换枪 / 右键开镜 / Esc 暂停
         </div>
-        <div class="m-help m-help-touch">左侧摇杆移动，右侧滑动瞄准。屏幕按钮用于射击、跳跃、换枪与暂停。</div>
+        <div class="m-help m-help-touch">左边摇杆移动，右边滑动瞄准。点“换枪”直接选择武器；春田步枪可开镜。</div>
         <div class="m-stats" id="menu-stats" style="display:none">
           <div>击杀 <b id="ms-kills">0</b></div>
           <div>死亡 <b id="ms-deaths">0</b></div>
@@ -353,7 +362,7 @@
           <div>用时 <b id="ms-time">-</b></div>
           <div>射击 <b id="ms-shots">0</b></div>
         </div>
-        <div class="m-foot" id="m-foot">德军会移动、跳跃、反击。训练模式提供无限备弹。</div>
+        <div class="m-foot" id="m-foot">敌人会移动、跳跃和反击；训练模式有无限备弹。</div>
       </div>
     </div>
   </div>
@@ -366,22 +375,33 @@
 
 <!-- 入口标题画面 -->
 <div id="title-screen">
-  <div class="ts-grad"></div>
-  <header class="ts-topline">
-    <span>西线作战档案 <span class="ts-edition">/ 1944</span></span>
-    <a href="../../" class="ts-back">返回游戏厅</a>
-  </header>
-  <main class="ts-content">
-    <div class="ts-badge">1944 年 6 月 6 日　诺曼底</div>
-    <h1 class="ts-title">西线前线</h1>
-    <p class="ts-sub">FRONTLINE ASSAULT</p>
-    <p class="ts-desc">登陆之后，战线仍未推进。德军的机械化突击兵正在集结。<br>选择战场、检查装备，然后出发。</p>
-    <button id="ts-enter" class="ts-btn">进入作战准备 <span aria-hidden="true">↗</span></button>
-    <p class="ts-tip ts-tip-desktop">WASD 移动　/　鼠标瞄准与射击　/　数字键切换武器</p>
-    <p class="ts-tip ts-tip-touch">支持触屏操作 · 横屏体验更佳</p>
-  </main>
-  <div class="ts-side-note" aria-hidden="true"><span>06</span><span>JUN</span><span>1944</span></div>
-  <footer class="ts-ver"><span>FRONTLINE / OPERATION BRIEFING</span><span>三维战场实验 · 游戏版本 2.0</span></footer>
+  <div class="ts-shell">
+    <header class="ts-topline">
+      <a class="ts-brand" href="../../">鼠哥游戏厅</a>
+      <a href="../../" class="ts-back">全部游戏</a>
+    </header>
+    <main class="ts-player">
+      <div class="ts-stage" aria-hidden="true">
+        <div class="ts-stage-mark">1944</div>
+      </div>
+      <div class="ts-content">
+        <span class="ts-badge">3D 射击游戏</span>
+        <h1 class="ts-title">西线前线</h1>
+        <p class="ts-desc">马上加入战斗，或者先选喜欢的模式和地图。</p>
+        <div class="ts-actions">
+          <button id="ts-enter" class="ts-btn">开始游戏 <span aria-hidden="true">▶</span></button>
+          <button id="ts-settings" class="ts-settings" type="button">选择模式与地图</button>
+        </div>
+        <p class="ts-tip ts-tip-desktop">WASD 移动 · 鼠标瞄准 · 1–5 切换武器</p>
+        <p class="ts-tip ts-tip-touch">触屏操作 · 横屏更好玩</p>
+      </div>
+    </main>
+    <footer class="ts-ver">
+      <div class="ts-game-icon" aria-hidden="true">WF</div>
+      <div class="ts-game-info"><strong>西线前线</strong><span>鼠哥游戏厅 · 单人射击</span></div>
+      <span class="ts-game-tag">无需下载</span>
+    </footer>
+  </div>
 </div>
 
 <script src="three.min.js"></script>
